@@ -10,7 +10,7 @@ services:
     volumes:
       - doan_pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
 
   backend_app:
     build: ./backend
@@ -22,8 +22,8 @@ services:
     environment:
       - DB_HOST=postgres_db
       - DB_USER=postgres
-      - DB_PASSWORD=123456
-      - DB_NAME=computerstore
+      - DB_PASSWORD=123
+      - DB_NAME=doan_db
     volumes:
       - ./backend:/app
     command: npm run dev
