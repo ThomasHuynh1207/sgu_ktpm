@@ -1,28 +1,29 @@
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
+import routes from "./routes/index.js";
 import sequelize from "./config/db.js";
-import productRoutes from "./routes/productRoutes.js";
+import { errorHandler } from "./middleware/errorMiddleware.js";
+import cors from "cors";
+
 
 dotenv.config();
-
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: 'http://localhost:5173' 
+}));
+
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Backend API is running 🚀");
-});
+// Routes
+app.use("/api", routes);
 
-app.use("/api/products", productRoutes);
+app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-
-sequelize
-  .authenticate()
-  .then(() => console.log("✅ Connected to PostgreSQL"))
-  .catch((err) => console.error("❌ Database connection error:", err));
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// Start
+sequelize.sync().then(() => {
+  console.log("✅ DB connected");
+  app.listen(process.env.PORT || 5000, () =>
+    console.log(`🚀 Server running on port ${process.env.PORT || 5000}`)
+  );
+}).catch(err => console.error("❌ Database error:", err));

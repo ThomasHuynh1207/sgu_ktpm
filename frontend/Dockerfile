@@ -1,20 +1,24 @@
-# Sử dụng Node 20
-FROM node:20
+# Sử dụng image Node chính thức
+FROM node:18-alpine
 
-# Tạo thư mục làm việc trong container
+# Đặt thư mục làm việc trong container
 WORKDIR /app
 
-# Sao chép file cấu hình trước để tận dụng cache Docker
+# Sao chép file package vào container để cài đặt dependencies
 COPY package*.json ./
 
-# Cài đặt thư viện
+# Cài đặt dependencies
 RUN npm install
 
-# Sao chép toàn bộ mã nguồn
+# Sao chép toàn bộ mã nguồn vào container
 COPY . .
 
-# Mở cổng Vite (React dev server)
+# Build dự án (chỉ cần nếu bạn muốn chạy bản build production)
+# RUN npm run build
+
+# Mở port (Vite mặc định là 5173)
 EXPOSE 5173
 
-# Chạy ứng dụng React ở chế độ development
+# Lệnh khởi chạy ứng dụng
 CMD ["npm", "run", "dev", "--", "--host"]
+
