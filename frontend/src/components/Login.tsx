@@ -79,7 +79,7 @@ export function Login({ onNavigate, setUser }: LoginProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Login</CardTitle>
+            <CardTitle></CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -88,7 +88,6 @@ export function Login({ onNavigate, setUser }: LoginProps) {
                 <Input
                   id="username"
                   type="text"
-                  // 🌟🌟🌟 ĐÃ SỬA: Đổi placeholder để hướng dẫn nhập username 🌟🌟🌟
                   placeholder="Nhập username của bạn"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
