@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState , useEffect} from 'react';
 import { Home } from './components/Home';
 import { ProductCatalog } from './components/ProductCatalog';
 import { ProductDetail } from './components/ProductDetail';
@@ -9,43 +9,12 @@ import { Register } from './components/Register';
 import { AdminDashboard } from './components/AdminDashboard';
 import { OrderHistory } from './components/OrderHistory';
 import { UserProfile } from './components/UserProfile';
+import { Header } from './components/Header';
 
 
 
-export type Product = {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  description: string;
-  image: string;
-  specs: string[];
-  stock: number;
-};
 
-export type CartItem = {
-  product: Product;
-  quantity: number;
-};
-
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'customer' | 'guest';
-};
-
-export type Order = {
-  id: string;
-  userId: string;
-  items: CartItem[];
-  total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered';
-  paymentMethod: string;
-  shippingMethod: string;
-  date: string;
-  shippingAddress: string;
-};
+import type { Product, CartItem, User, Order } from './types';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
@@ -54,6 +23,34 @@ export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+
+  useEffect(() => {
+  const savedUser = localStorage.getItem('user');
+  const token = localStorage.getItem('token');
+  if (savedUser && token) {
+    try {
+      const parsed = JSON.parse(savedUser);
+      setUser({
+        id: parsed.user_id || parsed.id,
+        username: parsed.username,
+        email: parsed.email,
+        role: parsed.role,
+      });
+    } catch (e) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+    }
+  }
+}, []);
+
+  const handleLogout = () => {
+    window.location.reload();
+    setUser(null);
+    setCart([]); // xóa giỏ hàng khi logout (tùy chọn)
+    setCurrentPage('home');
+    alert('Đã đăng xuất thành công!');
+  };
+
 
   const addToCart = (product: Product, quantity: number = 1) => {
     setCart(prevCart => {
@@ -109,6 +106,10 @@ export default function App() {
     clearCart();
     setCurrentPage('order-history');
   };
+
+
+  
+
 
   const renderPage = () => {
     switch (currentPage) {
@@ -209,7 +210,18 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {renderPage()}
+      {/* 3. Header HIỆN LUÔN TRÊN CÙNG – ĐẸP NHƯ SHOPEE */}
+      <Header
+      onNavigate={setCurrentPage}
+      cartCount={cart.length}
+      user={user}
+      setUser={setUser}   // ← QUAN TRỌNG: truyền setUser để đăng xuất mượt
+      />
+
+      {/* Nội dung chính */}
+      <main className="pt-16"> {/* pt-16 để không bị Header che */}
+        {renderPage()}
+      </main>
     </div>
   );
 }

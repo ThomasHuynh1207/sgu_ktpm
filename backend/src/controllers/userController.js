@@ -62,8 +62,7 @@ export const loginUser = async (req, res) => {
  const user = await User.findOne({ 
         where: { 
             [Op.or]: [
-                { username: username }, // Thử tìm theo Username
-                { email: username }    // Thử tìm theo Email
+                { username: username } // Thử tìm theo Username
             ]
         } 
     }); 

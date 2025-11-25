@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Navbar } from './Navbar';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { products, categories } from '../data/products';
-import type { Product } from '../App';
+import type { Product } from '../types';
 
 type ProductCatalogProps = {
   onNavigate: (page: string) => void;
@@ -49,7 +48,7 @@ export function ProductCatalog({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar onNavigate={onNavigate} cartItemCount={0} user={null} />
+
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}

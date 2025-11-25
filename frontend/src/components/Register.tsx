@@ -4,7 +4,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Monitor } from 'lucide-react';
-import type { User } from '../App';
+import type { User } from '../types';
 
 type RegisterProps = {
   onNavigate: (page: string) => void;
@@ -13,7 +13,7 @@ type RegisterProps = {
 
 export function Register({ onNavigate, setUser }: RegisterProps) {
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -36,10 +36,10 @@ export function Register({ onNavigate, setUser }: RegisterProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: formData.email, // dùng email làm username
+          username: formData.username, 
           password: formData.password,
           email: formData.email,
-          full_name: formData.name,
+          full_name: formData.username,
           phone: '',
           address: '',
           role: 'customer',
@@ -56,7 +56,7 @@ export function Register({ onNavigate, setUser }: RegisterProps) {
       alert('✅ Đăng ký thành công!');
       setUser({
         id: newUser.user_id,
-        name: newUser.full_name,
+        username: newUser.username,
         email: newUser.email,
         role: newUser.role,
       });
@@ -86,14 +86,14 @@ export function Register({ onNavigate, setUser }: RegisterProps) {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="name">Họ và Tên</Label>
+                <Label htmlFor="name">Tên đăng nhập</Label>
                 <Input
-                  id="name"
+                  id="username"
                   type="text"
-                  placeholder="Nguyen Van A"
-                  value={formData.name}
+                  placeholder="username"
+                  value={formData.username}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                    setFormData({ ...formData, username: e.target.value })
                   }
                   required
                 />

@@ -4,7 +4,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Monitor } from 'lucide-react';
-import type { User } from '../App';
+import type { User } from '../types';
 
 type LoginProps = {
   onNavigate: (page: string) => void;
@@ -43,16 +43,27 @@ export function Login({ onNavigate, setUser }: LoginProps) {
 
       // ĐĂNG NHẬP THÀNH CÔNG → LƯU TOKEN + USER
       localStorage.setItem('token', data.token);        // ← LƯU TOKEN
-      localStorage.setItem('user', JSON.stringify(data.user)); // ← LƯU USER
-      // --- CHỈ KHI ĐĂNG NHẬP THÀNH CÔNG THÌ CODE MỚI ĐẾN ĐƯỢC ĐÂY ---
+      localStorage.setItem('user', JSON.stringify({
+      user_id: data.user.user_id || data.user.id,
+      username: data.user.username,
+      email: data.user.email,
+      role: data.user.role,
+      }));
 
-      setUser(data.user); 
+      
+      // Thành:
+      setUser({
+        id: data.user.user_id || data.user.id,        // ← quan trọng
+        username: data.user.username,
+        email: data.user.email,
+        role: data.user.role,
+      });
 
       // Kiểm tra vai trò để chuyển hướng
       if (data.user.role === 'admin') {
         onNavigate('admin'); 
       } else {
-        onNavigate('Home'); 
+        onNavigate('profile'); 
       }
       
       // -----------------------------------------------------------
@@ -84,11 +95,11 @@ export function Login({ onNavigate, setUser }: LoginProps) {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="username">Email</Label>
+                <Label htmlFor="username" >Tên đăng nhập</Label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Nhập username của bạn"
+                  placeholder="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -110,7 +121,7 @@ export function Login({ onNavigate, setUser }: LoginProps) {
               {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Đang đăng nhập...' : 'Login'}
+                {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </Button>
 
               <div className="text-center text-sm text-gray-600">

@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Monitor, Laptop, ShoppingBag, Headphones, Keyboard, Mouse } from 'lucide-react';
 import { products, categories } from '../data/products';
-import type { Product } from '../App';
+import type { Product } from '../types';
 
 type HomeProps = {
   onNavigate: (page: string) => void;
@@ -35,7 +35,6 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar onNavigate={onNavigate} cartItemCount={0} user={null} />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
