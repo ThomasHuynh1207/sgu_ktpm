@@ -81,12 +81,12 @@ export function Register({ onNavigate, setUser }: RegisterProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Đăng ký</CardTitle>
+            <CardTitle></CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="name">Tên đầy đủ</Label>
+                <Label htmlFor="name">Họ và Tên</Label>
                 <Input
                   id="name"
                   type="text"
