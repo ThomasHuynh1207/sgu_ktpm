@@ -209,19 +209,22 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 3. Header HIỆN LUÔN TRÊN CÙNG – ĐẸP NHƯ SHOPEE */}
-      <Header
-      onNavigate={setCurrentPage}
-      cartCount={cart.length}
-      user={user}
-      setUser={setUser}   // ← QUAN TRỌNG: truyền setUser để đăng xuất mượt
-      />
+  <div className="min-h-screen bg-gray-50">
 
-      {/* Nội dung chính */}
-      <main className="pt-16"> {/* pt-16 để không bị Header che */}
-        {renderPage()}
-      </main>
-    </div>
-  );
+    {/* ẨN HEADER KHI ĐĂNG NHẬP / ĐĂNG KÝ */}
+    {currentPage !== 'login' && currentPage !== 'register' && (
+      <Header
+        onNavigate={setCurrentPage}
+        cartCount={cart.length}
+        user={user}
+        setUser={setUser}
+      />
+    )}
+
+    {/* Nội dung trang */}
+    <main className={currentPage === 'login' || currentPage === 'register' ? 'pt-0' : 'pt-16'}>
+      {renderPage()}
+    </main>
+  </div>
+);
 }

@@ -1,4 +1,3 @@
-// src/components/UserProfile.tsx
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -6,7 +5,7 @@ import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { User as UserIcon, Mail, LogOut, Package, Shield } from 'lucide-react';
-import type { User } from '../types'; // hoặc '@/App' nếu chưa tạo file types
+import type { User } from '../types'; 
 
 type UserProfileProps = {
   onNavigate: (page: string) => void;

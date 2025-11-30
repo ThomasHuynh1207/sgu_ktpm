@@ -1,5 +1,4 @@
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Navbar } from './Navbar';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';

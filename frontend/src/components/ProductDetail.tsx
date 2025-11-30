@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Navbar } from './Navbar';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { ChevronLeft, Minus, Plus, ShoppingCart, Check } from 'lucide-react';
 import { products } from '../data/products';
-import type { Product } from '../App';
+import type { Product } from '../types';
 
 type ProductDetailProps = {
   productId: string | null;
