@@ -37,13 +37,13 @@ export function Header({ user, onNavigate, cartCount, setUser }: HeaderProps) {
           </div>
 
           {/* Thanh tìm kiếm */}
-          <div className="flex-1 max-w-2xl mx-8 hidden md:block">
+          <div className="flex-1 max-w-3xl mx-8 hidden md:block">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 type="text"
                 placeholder="Tìm kiếm laptop, PC, linh kiện, phụ kiện..."
-                className="w-full pl-10 pr-4 py-2.5 h-11 rounded-xl bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 "
               />
             </div>
           </div>
@@ -86,7 +86,7 @@ export function Header({ user, onNavigate, cartCount, setUser }: HeaderProps) {
                 </Button>
               </>
             ) : (
-              <Button onClick={() => onNavigate('login')} size="lg" className="bg-blue-600 hover:bg-blue-700 font-bold px-8 rounded-full">
+              <Button onClick={() => onNavigate('login')} size="lg" className="bg-blue-600 hover:bg-blue-700  ">
                 Đăng nhập
               </Button>
             )}
