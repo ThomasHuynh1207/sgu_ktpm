@@ -1,4 +1,4 @@
-import { useState , useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -16,9 +16,10 @@ import {
   Edit,
   Trash2,
   X,
+  Loader2,
 } from 'lucide-react';
-import type { Order, User, Product   } from '../types';
-import ProductBacked from '../../../backend/src/models/Product';
+
+import type { Order, User, Product } from '../types';
 
 type AdminDashboardProps = {
   onNavigate: (page: string) => void;
@@ -28,159 +29,64 @@ type AdminDashboardProps = {
 };
 
 export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDashboardProps) {
-  //30/11/2025
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  //
-  // 1. TẢI DỮ LIỆU KHI VÀO TRANG ADMIN
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [prodRes, catRes] = await Promise.all([
-          fetch('http://localhost:5000/api/products'),
-          fetch('http://localhost:5000/api/categories')
-        ]);
 
-        if (!prodRes.ok || !catRes.ok) throw new Error('Lỗi tải dữ liệu');
-
-        const prods = await prodRes.json();
-        const cats = await catRes.json();
-
-        setProducts(prods);
-        setCategories(cats);
-        setLoading(false);
-      } catch (error) {
-        toast.error('Không kết nối được server!');
-        setLoading(false);
-      }
-    };
-
-    if (user?.role === 'admin') fetchData();
-  }, [user]);
-
-  // 2. HÀM THÊM SẢN PHẨM
-  const handleAddProduct = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      name: formData.get('name') as string,
-      price: Number(formData.get('price')),
-      category: formData.get('category') as string,
-      stock: Number(formData.get('stock')),
-      image: (formData.get('image') as string) || 'https://via.placeholder.com/300',
-      description: (formData.get('description') as string) || ''
-    };
-
-    try {
-      const res = await fetch('http://localhost:5000/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      if (res.ok) {
-        toast.success('Thêm sản phẩm thành công!');
-        setIsAddingProduct(false);
-        // Reload lại danh sách
-        const newProds = await (await fetch('http://localhost:5000/api/products')).json();
-        setProducts(newProds);
-      } else {
-        const err = await res.json();
-        toast.error(err.message || 'Thêm thất bại');
-      }
-    } catch (error) {
-      toast.error('Lỗi kết nối server');
-    }
-  };
-
-  // 3. HÀM SỬA + XÓA (TƯƠNG TỰ)
-  const handleEditProduct = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-
-  if (!selectedProductId) {
-    toast.error("Không xác định được sản phẩm cần sửa!");
-    return;
-  }
-
-  const formData = new FormData(e.currentTarget);
-  const data = {
-    name: formData.get('name') as string,
-    price: Number(formData.get('price')),
-    category: formData.get('category') as string,
-    stock: Number(formData.get('stock')),
-    image: (formData.get('image') as string) || 'https://via.placeholder.com/300',
-    description: (formData.get('description') as string) || '',
-  };
-
-  try {
-    const res = await fetch(
-      `http://localhost:5000/api/products/${selectedProductId}`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      }
-    );
-
-    if (res.ok) {
-      toast.success('Cập nhật sản phẩm thành công!');
-      setEditingProduct(null);
-      setSelectedProductId(null);
-
-      // reload list
-      const newProds = await (await fetch('http://localhost:5000/api/products')).json();
-      setProducts(newProds);
-    } else {
-      const err = await res.json();
-      toast.error(err.message || 'Cập nhật thất bại');
-    }
-  } catch (error) {
-    toast.error('Lỗi kết nối server');
-  }
-};
-
-
-  const handleDeleteProduct = async (id: string) => {
-    if (!confirm('Xóa sản phẩm này?')) return;
-    try {
-      await fetch(`http://localhost:5000/api/products/${id}`, { method: 'DELETE' });
-      toast.success('Xóa thành công!');
-      const newProds = await (await fetch('http://localhost:5000/api/products')).json();
-      setProducts(newProds);
-    } catch (error) {
-      toast.error('Xóa thất bại');
-    }
-  };
-
-
-
-
-
-  
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editCategoryName, setEditCategoryName] = useState('');
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
+  // Tải dữ liệu từ server
+  useEffect(() => {
+    const fetchData = async () => {
+      if (user?.role !== 'admin') return;
+
+      try {
+        setLoading(true);
+        const [prodRes, catRes] = await Promise.all([
+          fetch('http://localhost:5000/api/products'),
+          fetch('http://localhost:5000/api/categories'),
+        ]);
+
+        if (!prodRes.ok || !catRes.ok) throw new Error('Lỗi tải dữ liệu');
+
+        const prods: Product[] = await prodRes.json();
+        const cats: string[] = await catRes.json();
+
+        setProducts(prods);
+        setCategories(cats.length > 0 ? cats : ['Uncategorized']);
+      } catch (error) {
+        toast.error('Không kết nối được server!');
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
       minimumFractionDigits: 0,
     }).format(price);
-  };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('vi-VN', {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
     });
-  };
+
+  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+  const pendingOrders = orders.filter((o) => o.status === 'pending').length;
 
   const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
     setOrders(
@@ -190,46 +96,157 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
     );
   };
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const pendingOrders = orders.filter((o) => o.status === 'pending').length;
-
-  // === SẢN PHẨM ===
-
-
-  
-
-
-
-  // === DANH MỤC ===
-  const handleAddCategory = (e: React.FormEvent) => {
+  // ==================== SẢN PHẨM ====================
+  const handleAddProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
-      setCategories([...categories, newCategoryName.trim()]);
-      setNewCategoryName('');
-      setIsAddingCategory(false);
+    const formData = new FormData(e.currentTarget);
+
+    const data = {
+      product_name: formData.get('name') as string,
+      price: Number(formData.get('price')),
+      category: (formData.get('category') as string) || 'Uncategorized',
+      stock: Number(formData.get('stock')),
+      image: (formData.get('image') as string)?.trim() || 'https://via.placeholder.com/300',
+      description: (formData.get('description') as string)?.trim() || '',
+    };
+
+    try {
+      const res = await fetch('http://localhost:5000/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        const newProduct: Product = await res.json();
+        setProducts([...products, newProduct]);
+        toast.success('Thêm sản phẩm thành công!');
+        setIsAddingProduct(false);
+        e.currentTarget.reset();
+      } else {
+        const err = await res.json();
+        toast.error(err.message || 'Thêm thất bại');
+      }
+    } catch {
+      toast.error('Lỗi kết nối server');
     }
   };
 
-  const handleEditCategory = (e: React.FormEvent) => {
+  const handleEditProduct = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      product_name: formData.get('name') as string,
+      price: Number(formData.get('price')),
+      category: (formData.get('category') as string) || 'Uncategorized',
+      stock: Number(formData.get('stock')),
+      image: (formData.get('image') as string)?.trim() || editingProduct.image,
+      description: (formData.get('description') as string)?.trim() || '',
+    };
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/products/${editingProduct.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        const updated: Product = await res.json();
+        setProducts(products.map((p) => (p.id === updated.id ? updated : p)));
+        toast.success('Cập nhật sản phẩm thành công!');
+        setEditingProduct(null);
+      } else {
+        const err = await res.json();
+        toast.error(err.message || 'Cập nhật thất bại');
+      }
+    } catch {
+      toast.error('Lỗi kết nối server');
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm('Xóa sản phẩm này vĩnh viễn?')) return;
+
+    try {
+      await fetch(`http://localhost:5000/api/products/${id}`, { method: 'DELETE' });
+      setProducts(products.filter((p) => p.id !== id));
+      toast.success('Xóa sản phẩm thành công!');
+    } catch {
+      toast.error('Xóa thất bại');
+    }
+  };
+
+  // ==================== DANH MỤC - ĐỒNG BỘ HOÀN TOÀN VỚI DB ====================
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newCategoryName.trim();
+    if (!name) return;
+
+    try {
+      const res = await fetch('http://localhost:5000/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCategories([...categories, data.name || name]);
+        setNewCategoryName('');
+        setIsAddingCategory(false);
+        toast.success('Thêm danh mục thành công');
+      } else {
+        const err = await res.json();
+        toast.error(err.message || 'Tên danh mục đã tồn tại');
+      }
+    } catch {
+      toast.error('Lỗi server');
+    }
+  };
+
+  const handleEditCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCategory || !editCategoryName.trim()) return;
-    const newName = editCategoryName.trim();
-    if (categories.includes(newName)) {
-      alert('Danh mục đã tồn tại!');
-      return;
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/categories/${encodeURIComponent(editingCategory)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editCategoryName.trim() }),
+      });
+
+      if (res.ok) {
+        const { name: newName } = await res.json();
+        setCategories(categories.map((c) => (c === editingCategory ? newName : c)));
+        setProducts(products.map((p) => (p.category === editingCategory ? { ...p, category: newName } : p)));
+        setEditingCategory(null);
+        setEditCategoryName('');
+        toast.success('Cập nhật danh mục thành công');
+      }
+    } catch {
+      toast.error('Cập nhật thất bại');
     }
-    setCategories(categories.map(cat => cat === editingCategory ? newName : cat));
-    setProducts(products.map(p => p.category === editingCategory ? { ...p, category: newName } : p));
-    setEditingCategory(null);
-    setEditCategoryName('');
   };
 
-  const handleDeleteCategory = (category: string) => {
-    if (confirm(`Xóa danh mục "${category}"? Tất cả sản phẩm sẽ bị chuyển sang "Uncategorized"`)) {
-      setCategories(categories.filter(cat => cat !== category));
-      setProducts(products.map(p => p.category === category ? { ...p, category: 'Uncategorized' } : p));
+  const handleDeleteCategory = async (category: string) => {
+    if (!confirm(`Xóa danh mục "${category}"?\nTất cả sản phẩm sẽ chuyển về "Uncategorized"`)) return;
+
+    try {
+      await fetch(`http://localhost:5000/api/categories/${encodeURIComponent(category)}`, {
+        method: 'DELETE',
+      });
+      setCategories(categories.filter((c) => c !== category));
+      setProducts(products.map((p) => (p.category === category ? { ...p, category: 'Uncategorized' } : p)));
+      toast.success('Xóa danh mục thành công');
+    } catch {
+      toast.error('Xóa thất bại');
     }
   };
+
+  // ==================== RENDER ====================
 
   if (!user || user.role !== 'admin') {
     return (
@@ -238,6 +255,17 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
           <h2 className="text-2xl mb-4 text-gray-900">Quyền truy cập bị từ chối</h2>
           <p className="text-gray-600 mb-6">Bạn không có quyền truy cập vào trang này</p>
           <Button onClick={() => onNavigate('home')}>Trở về trang chủ</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+          <p className="text-lg">Đang tải dữ liệu admin...</p>
         </div>
       </div>
     );
@@ -299,7 +327,6 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
           </Card>
         </div>
 
-        {/* Tabs */}
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList>
             <TabsTrigger value="products">Quản lý sản phẩm</TabsTrigger>
@@ -307,7 +334,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
             <TabsTrigger value="categories">Quản lý danh mục</TabsTrigger>
           </TabsList>
 
-          {/* Products Tab */}
+          {/* ==================== SẢN PHẨM ==================== */}
           <TabsContent value="products" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl text-gray-900">Danh sách sản phẩm</h2>
@@ -317,7 +344,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
               </Button>
             </div>
 
-            {/* FORM THÊM SẢN PHẨM */}
+            {/* Form thêm sản phẩm */}
             {isAddingProduct && (
               <Card className="mb-6 border-blue-300">
                 <CardHeader>
@@ -377,20 +404,13 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
               </Card>
             )}
 
-            {/* FORM CHỈNH SỬA SẢN PHẨM */}
+            {/* Form sửa sản phẩm */}
             {editingProduct && (
               <Card className="mb-6 border-amber-300">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <CardTitle>Chỉnh sửa sản phẩm</CardTitle>
-                    <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => 
-                      {setEditingProduct(products[0]);
-                      setSelectedProductId(products[0].id);
-
-                    }}>
+                    <Button variant="ghost" size="sm" onClick={() => setEditingProduct(null)}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -430,7 +450,13 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                       </div>
                       <div className="md:col-span-2">
                         <Label htmlFor="edit-desc">Mô tả</Label>
-                        <Textarea id="edit-desc" name="description" rows={3} defaultValue={editingProduct.description} required />
+                        <Textarea
+                          id="edit-desc"
+                          name="description"
+                          rows={3}
+                          defaultValue={editingProduct.description}
+                          required
+                        />
                       </div>
                     </div>
                     <div className="flex justify-end gap-2">
@@ -444,7 +470,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
               </Card>
             )}
 
-            {/* DANH SÁCH SẢN PHẨM */}
+            {/* Danh sách sản phẩm */}
             <div className="grid gap-4">
               {products.map((product) => (
                 <Card key={product.id}>
@@ -453,7 +479,14 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                       <div className="flex gap-4 flex-1">
                         <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
                           {product.image ? (
-                            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/300';
+                              }}
+                            />
                           ) : (
                             <div className="w-full h-full bg-gray-200 border-2 border-dashed rounded-xl" />
                           )}
@@ -464,7 +497,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                             {product.category}
                           </Badge>
                           <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                            {product.description}
+                            {product.description || 'Không có mô tả'}
                           </p>
                           <div className="flex gap-4 text-sm">
                             <span className="text-blue-600 font-medium">{formatPrice(product.price)}</span>
@@ -496,7 +529,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
             </div>
           </TabsContent>
 
-          {/* Orders Tab */}
+          {/* ==================== ĐƠN HÀNG ==================== */}
           <TabsContent value="orders" className="space-y-6">
             <h2 className="text-2xl text-gray-900">Danh sách đơn hàng</h2>
             <div className="grid gap-4">
@@ -557,7 +590,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
             </div>
           </TabsContent>
 
-          {/* Categories Tab */}
+          {/* ==================== DANH MỤC ==================== */}
           <TabsContent value="categories" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl text-gray-900">Danh sách danh mục</h2>
@@ -567,13 +600,15 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
               </Button>
             </div>
 
-            {/* FORM THÊM DANH MỤC */}
             {isAddingCategory && (
               <Card className="mb-6 border-green-300">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <CardTitle>Thêm danh mục mới</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={() => setIsAddingCategory(false)}>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setIsAddingCategory(false);
+                      setNewCategoryName('');
+                    }}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -595,13 +630,15 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
               </Card>
             )}
 
-            {/* FORM CHỈNH SỬA DANH MỤC */}
             {editingCategory && (
               <Card className="mb-6 border-amber-300">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <CardTitle>Chỉnh sửa danh mục</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={() => { setEditingCategory(null); setEditCategoryName(''); }}>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setEditingCategory(null);
+                      setEditCategoryName('');
+                    }}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -609,13 +646,15 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                 <CardContent>
                   <form onSubmit={handleEditCategory} className="flex gap-2">
                     <Input
-                      placeholder="Tên mới"
                       value={editCategoryName}
                       onChange={(e) => setEditCategoryName(e.target.value)}
                       required
                     />
                     <Button type="submit">Cập nhật</Button>
-                    <Button type="button" variant="outline" onClick={() => { setEditingCategory(null); setEditCategoryName(''); }}>
+                    <Button type="button" variant="outline" onClick={() => {
+                      setEditingCategory(null);
+                      setEditCategoryName('');
+                    }}>
                       Hủy
                     </Button>
                   </form>
@@ -623,10 +662,9 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
               </Card>
             )}
 
-            {/* DANH SÁCH DANH MỤC */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {categories.map((category) => {
-                const productCount = products.filter(p => p.category === category).length;
+                const productCount = products.filter((p) => p.category === category).length;
                 return (
                   <Card key={category}>
                     <CardContent className="p-6">

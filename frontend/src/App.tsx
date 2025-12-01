@@ -212,7 +212,7 @@ export default function App() {
   <div className="min-h-screen bg-gray-50">
 
     {/* ẨN HEADER KHI ĐĂNG NHẬP / ĐĂNG KÝ */}
-    {currentPage !== 'login' && currentPage !== 'register' && (
+    {currentPage !== 'login' && currentPage !== 'register' &&  (
       <Header
         onNavigate={setCurrentPage}
         cartCount={cart.length}
