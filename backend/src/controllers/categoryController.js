@@ -3,11 +3,11 @@ import Category from "../models/Category.js";
 export const getAllCategories = async (req, res) => {
   try {
     const categories = await Category.findAll({
-      attributes: ["category_name"],
+    
       order: [["category_name", "ASC"]],
     });
-    // QUAN TRỌNG NHẤT: TRẢ VỀ MẢNG STRING!
-    res.json(categories.map(c => c.category_name));
+    
+    res.json(categories);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Lỗi lấy danh mục" });
@@ -21,7 +21,7 @@ export const createCategory = async (req, res) => {
       where: { category_name: name.trim() },
       defaults: { category_name: name.trim() }
     });
-    res.status(201).json({ name: cat.category_name });
+    res.status(201).json(cat);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

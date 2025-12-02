@@ -30,7 +30,7 @@ type AdminDashboardProps = {
 
 export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDashboardProps) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<{ category_id: number; category_name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -209,8 +209,9 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setCategories([...categories, data.name || name]);
+        const newCategory = await res.json();
+
+        setCategories(prev => [...prev, newCategory]);
         setNewCategoryName('');
         setIsAddingCategory(false);
         toast.success('Thêm danh mục thành công');
@@ -235,9 +236,18 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
       });
 
       if (res.ok) {
-        const { name: newName } = await res.json();
-        setCategories(categories.map((c) => (c === editingCategory ? newName : c)));
-        setProducts(products.map((p) => (p.category === editingCategory ? { ...p, category: newName } : p)));
+        const updatedCategory = await res.json(); 
+        
+        setCategories(prev => prev.map(c => 
+          c.category_id === updatedCategory.category_id ? updatedCategory : c
+        ));
+
+        // Cập nhật tên danh mục trong sản phẩm
+        setProducts(prev => prev.map(p => 
+          p.category_id === updatedCategory.category_id 
+            ? { ...p, category: updatedCategory.category_name }
+            : p
+        ));
         setEditingCategory(null);
         setEditCategoryName('');
         toast.success('Cập nhật danh mục thành công');
@@ -248,18 +258,17 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm(`Xóa danh mục "${categoryId}"?\nTất cả sản phẩm sẽ chuyển về "Uncategorized"`)) return;
+    if (!confirm(`Xóa danh mục này?\nTất cả sản phẩm sẽ chuyển về "Chưa phân loại"`)) return;
 
     try {
-      await fetch(`http://localhost:5000/api/categories/${encodeURIComponent(categoryId)}`, {
+      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
         method: 'DELETE',
       })
 
-      setCategories(prev => prev.filter(c => c.category_id.toString() !== categoryId));
+      const id = Number(categoryId);
+      setCategories(prev => prev.filter(c => c.category_id !== id));
       setProducts(prev => prev.map(p => 
-      p.category?.toString() === categoryId 
-        ? { ...p, category: 'Chưa phân loại' } 
-        : p
+      p.category_id === id ? { ...p, category: 'Chưa phân loại', category_id: 0 } : p
     ));
     toast.success('Xóa thành công!');
     } catch {
@@ -393,7 +402,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                         >
                           <option value="">Chọn danh mục</option>
                           {categories.map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
+                            <option key={cat.category_id} value={cat.category_name}>{cat.category_name}</option>
                           ))}
                         </select>
                       </div>
@@ -452,8 +461,8 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                           defaultValue={editingProduct.category}
                           required
                         >
-                          {categories.map((name) => (
-                            <option key={name} value={name}>{name}</option>
+                          {categories.map((cat) => (
+                            <option key={cat.category_id} value={cat.category_name}>{cat.category_name}</option>
                           ))}
                         </select>
                       </div>
@@ -685,7 +694,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {categories.map((cat) => {
-                const productCount = products.filter((p) => p.category_id === cat.category_name).length;
+                const productCount = products.filter((p) => p.category_id === cat.category_id ).length;
                 return (
                   <Card key={cat.category_id}>
                     <CardContent className="p-6">
