@@ -30,7 +30,7 @@ type AdminDashboardProps = {
 
 export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDashboardProps) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -56,18 +56,26 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
         if (!prodRes.ok || !catRes.ok) throw new Error('Lỗi tải dữ liệu');
 
       const rawProducts = await prodRes.json();
-      const cats: string[] = await catRes.json();
+      const rawCategories= await catRes.json();
 
-      // QUAN TRỌNG NHẤT – CHUẨN HÓA ĐÚNG VỚI DB CỦA BẠN
+      // Tạo map category_id → tên
+      const categoryMap = Object.fromEntries(
+          rawCategories.map((cat: any) => [Number(cat.category_id), cat.category_name])
+        );
+
+      //Chuẩn hoá sản phẩm
       const normalizedProducts = rawProducts.map((p: any) => ({
         ...p,
-        id: p.product_id.toString(),           // LẤY product_id LÀM id
-        name: p.product_name,                  // Dùng product_name làm tên hiển thị
+        id: p.product_id.toString(),
+        name: p.product_name,
+
+        category_id: Number(p.category_id),
+        category: categoryMap[p.category_id] || 'Chưa phân loại',
       }));
 
       setProducts(normalizedProducts);
-      setCategories(cats.length > 0 ? cats : ['Uncategorized']);
-      
+      setCategories(rawCategories);
+
       } catch (error) {
         toast.error('Không kết nối được server!');
         console.error(error);
@@ -118,7 +126,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
       description: (formData.get('description') as string)?.trim() || '',
     };
 
-    try {
+    try { 
       const res = await fetch('http://localhost:5000/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -239,16 +247,21 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
     }
   };
 
-  const handleDeleteCategory = async (category: string) => {
-    if (!confirm(`Xóa danh mục "${category}"?\nTất cả sản phẩm sẽ chuyển về "Uncategorized"`)) return;
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!confirm(`Xóa danh mục "${categoryId}"?\nTất cả sản phẩm sẽ chuyển về "Uncategorized"`)) return;
 
     try {
-      await fetch(`http://localhost:5000/api/categories/${encodeURIComponent(category)}`, {
+      await fetch(`http://localhost:5000/api/categories/${encodeURIComponent(categoryId)}`, {
         method: 'DELETE',
-      });
-      setCategories(categories.filter((c) => c !== category));
-      setProducts(products.map((p) => (p.category === category ? { ...p, category: 'Uncategorized' } : p)));
-      toast.success('Xóa danh mục thành công');
+      })
+
+      setCategories(prev => prev.filter(c => c.category_id.toString() !== categoryId));
+      setProducts(prev => prev.map(p => 
+      p.category?.toString() === categoryId 
+        ? { ...p, category: 'Chưa phân loại' } 
+        : p
+    ));
+    toast.success('Xóa thành công!');
     } catch {
       toast.error('Xóa thất bại');
     }
@@ -439,8 +452,8 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                           defaultValue={editingProduct.category}
                           required
                         >
-                          {categories.map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
+                          {categories.map((name) => (
+                            <option key={name} value={name}>{name}</option>
                           ))}
                         </select>
                       </div>
@@ -671,14 +684,14 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categories.map((category) => {
-                const productCount = products.filter((p) => p.category === category).length;
+              {categories.map((cat) => {
+                const productCount = products.filter((p) => p.category_id === cat.category_name).length;
                 return (
-                  <Card key={category}>
+                  <Card key={cat.category_id}>
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="text-lg text-gray-900 mb-1">{category}</h3>
+                          <h3 className="text-lg text-gray-900 mb-1">{cat.category_name}</h3>
                           <p className="text-sm text-gray-600">{productCount} sản phẩm</p>
                         </div>
                         <div className="flex gap-2">
@@ -686,8 +699,8 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setEditingCategory(category);
-                              setEditCategoryName(category);
+                              setEditingCategory(cat.category_id.toString());
+                              setEditCategoryName(cat.category_name);
                             }}
                           >
                             <Edit className="h-4 w-4" />
@@ -696,7 +709,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                             variant="outline"
                             size="sm"
                             className="text-red-600 hover:bg-red-50"
-                            onClick={() => handleDeleteCategory(category)}
+                            onClick={() => handleDeleteCategory(cat.category_id.toString())}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
