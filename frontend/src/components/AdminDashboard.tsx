@@ -55,11 +55,19 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
 
         if (!prodRes.ok || !catRes.ok) throw new Error('Lỗi tải dữ liệu');
 
-        const prods: Product[] = await prodRes.json();
-        const cats: string[] = await catRes.json();
+      const rawProducts = await prodRes.json();
+      const cats: string[] = await catRes.json();
 
-        setProducts(prods);
-        setCategories(cats.length > 0 ? cats : ['Uncategorized']);
+      // QUAN TRỌNG NHẤT – CHUẨN HÓA ĐÚNG VỚI DB CỦA BẠN
+      const normalizedProducts = rawProducts.map((p: any) => ({
+        ...p,
+        id: p.product_id.toString(),           // LẤY product_id LÀM id
+        name: p.product_name,                  // Dùng product_name làm tên hiển thị
+      }));
+
+      setProducts(normalizedProducts);
+      setCategories(cats.length > 0 ? cats : ['Uncategorized']);
+      
       } catch (error) {
         toast.error('Không kết nối được server!');
         console.error(error);
@@ -420,7 +428,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="edit-name">Tên sản phẩm</Label>
-                        <Input id="edit-name" name="name" defaultValue={editingProduct.name} required />
+                        <Input id="edit-name" name="name" defaultValue={editingProduct.product_name} required />
                       </div>
                       <div>
                         <Label htmlFor="edit-category">Danh mục</Label>
@@ -481,7 +489,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                           {product.image ? (
                             <img
                               src={product.image}
-                              alt={product.name}
+                              alt={product.product_name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 e.currentTarget.src = 'https://via.placeholder.com/300';
@@ -492,7 +500,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                           )}
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-lg text-gray-900 mb-1">{product.name}</h3>
+                          <h3 className="text-lg text-gray-900 mb-1">{product.product_name}</h3>
                           <Badge variant="secondary" className="mb-2">
                             {product.category}
                           </Badge>
@@ -552,7 +560,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                       <p className="text-sm text-gray-600 mb-2">Sản phẩm:</p>
                       {order.items.map((item) => (
                         <p key={item.product.id} className="text-sm text-gray-900">
-                          {item.product.name} × {item.quantity}
+                          {item.product.product_name} × {item.quantity}
                         </p>
                       ))}
                     </div>

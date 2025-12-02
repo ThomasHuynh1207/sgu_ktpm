@@ -54,7 +54,7 @@ export function Cart({ cart, onNavigate, updateQuantity, removeItem }: CartProps
                       <div className="w-32 h-32 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                         <ImageWithFallback
                           src={item.product.image}
-                          alt={item.product.name}
+                          alt={item.product.product_name || 'Sản phẩm'}
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -64,7 +64,7 @@ export function Cart({ cart, onNavigate, updateQuantity, removeItem }: CartProps
                         <div className="flex justify-between mb-2">
                           <div>
                             <h3 className="text-lg text-gray-900 mb-1">
-                              {item.product.name}
+                              {item.product.product_name || 'Sản phẩm không tên'}
                             </h3>
                             <p className="text-sm text-gray-600">
                               {item.product.category}
