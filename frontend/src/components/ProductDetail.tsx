@@ -1,10 +1,10 @@
-import { useState } from 'react';
+// src/components/pages/ProductDetail.tsx
+import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
-import { ChevronLeft, Minus, Plus, ShoppingCart, Check } from 'lucide-react';
-import { products } from '../data/products';
+import { ChevronLeft, Minus, Plus, ShoppingCart, Check, Loader2 } from 'lucide-react';
 import type { Product } from '../types';
 
 type ProductDetailProps = {
@@ -14,27 +14,65 @@ type ProductDetailProps = {
 };
 
 export function ProductDetail({ productId, onNavigate, addToCart }: ProductDetailProps) {
-  const [quantity, setQuantity] = useState(1);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [quantity, setQuantity] = useState(1);          // ĐÃ SỬA
   const [added, setAdded] = useState(false);
 
-  const product = products.find((p) => p.id === productId);
+  useEffect(() => {
+    if (!productId) {
+      setLoading(false);
+      return;
+    }
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h2 className="text-2xl mb-4 text-gray-900">Không tìm thấy sản phẩm</h2>
-          <Button onClick={() => onNavigate('products')}>
-            Quay lại danh mục
-          </Button>
-        </div>
-      </div>
-    );
-  }
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('http://localhost:5000/api/products');
+        if (!res.ok) throw new Error('Không tải được sản phẩm');
+
+        const data = await res.json();
+        const normalized: Product[] = data.map((p: any) => ({
+          id: p.product_id?.toString() || p.id,
+          product_name: p.product_name,
+          name: p.product_name,
+          category: p.category_name || p.category || 'Chưa phân loại',
+          category_id: Number(p.category_id) || 0,
+          price: Number(p.price),
+          description: p.description || 'Không có mô tả',
+          image: p.image || 'https://via.placeholder.com/600',
+          specs: Array.isArray(p.specs) ? p.specs : [],
+          stock: Number(p.stock) || 0,
+        }));
+
+        const currentProduct = normalized.find(p => p.id === productId);
+        if (!currentProduct) {
+          setProduct(null);
+          setLoading(false);
+          return;
+        }
+
+        setProduct(currentProduct);
+
+        const related = normalized
+          .filter(p => p.category === currentProduct.category && p.id !== currentProduct.id)
+          .slice(0, 4);
+        setRelatedProducts(related);
+
+      } catch (err) {
+        console.error(err);
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [productId]);
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
+    return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
       minimumFractionDigits: 0,
@@ -42,34 +80,54 @@ export function ProductDetail({ productId, onNavigate, addToCart }: ProductDetai
   };
 
   const handleAddToCart = () => {
+    if (!product) return;
     addToCart(product, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
 
-  const relatedProducts = products
-    .filter((p) => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
+  // Loading
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-lg text-gray-600">Đang tải chi tiết sản phẩm...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Không tìm thấy sản phẩm
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+          <h2 className="text-3xl mb-6 text-gray-900">Không tìm thấy sản phẩm</h2>
+          <Button size="lg" onClick={() => onNavigate('products')}>
+            Quay lại danh mục
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-     
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
+
         <Button
           variant="ghost"
-          className="mb-6"
+          className="mb-8 text-lg"
           onClick={() => onNavigate('products')}
         >
-          <ChevronLeft className="mr-2 h-4 w-4" />
+          <ChevronLeft className="mr-2 h-5 w-5" />
           Quay lại danh mục
         </Button>
 
-        {/* Product Detail */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-          {/* Image */}
-          <div className="bg-white rounded-lg overflow-hidden shadow-sm">
+          {/* Ảnh */}
+          <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
             <div className="aspect-square">
               <ImageWithFallback
                 src={product.image}
@@ -79,110 +137,114 @@ export function ProductDetail({ productId, onNavigate, addToCart }: ProductDetai
             </div>
           </div>
 
-          {/* Info */}
-          <div>
-            <Badge className="mb-4">{product.category}</Badge>
-            <h1 className="text-4xl mb-4 text-gray-900">{product.name}</h1>
-            <p className="text-3xl text-blue-600 mb-6">{formatPrice(product.price)}</p>
+          {/* Thông tin */}
+          <div className="flex flex-col justify-center">
+            <Badge className="mb-4 w-fit text-lg px-4 py-2">{product.category}</Badge>
+            <h1 className="text-4xl font-bold mb-6 text-gray-900">{product.name}</h1>
+            <p className="text-4xl font-bold text-blue-600 mb-8">
+              {formatPrice(product.price)}
+            </p>
 
-            <div className="mb-6">
-              <p className="text-gray-700 mb-4">{product.description}</p>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600">Stok:</span>
-                <Badge variant={product.stock > 0 ? 'default' : 'destructive'}>
-                  {product.stock > 0 ? `${product.stock} unit tersedia` : 'Stok Habis'}
-                </Badge>
+            <p className="text-lg text-gray-700 mb-8 leading-relaxed">
+              {product.description}
+            </p>
+
+            <div className="flex items-center gap-3 mb-8">
+              <span className="text-gray-600">Tình trạng:</span>
+              <Badge variant={product.stock > 0 ? 'default' : 'destructive'} className="text-base px-4 py-2">
+                {product.stock > 0 ? `${product.stock} sản phẩm có sẵn` : 'Hết hàng'}
+              </Badge>
+            </div>
+
+            {product.specs.length > 0 && (
+              <div className="bg-gray-50 rounded-xl p-8 mb-8">
+                <h3 className="text-xl font-bold mb-6 text-gray-900">Thông số kỹ thuật</h3>
+                <ul className="space-y-4">
+                  {product.specs.map((spec, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <Check className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-gray-700">{spec}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
+            )}
 
-            {/* Specifications */}
-            <div className="bg-gray-50 rounded-lg p-6 mb-6">
-              <h3 className="mb-4 text-gray-900">Đặc điểm kỹ thuật</h3>
-              <ul className="space-y-2">
-                {product.specs.map((spec, index) => (
-                  <li key={index} className="flex items-start gap-2 text-gray-700">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span>{spec}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Quantity & Add to Cart */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex items-center gap-3 bg-white border border-gray-300 rounded-lg px-4 py-2">
+            {/* Số lượng + Thêm giỏ */}
+            <div className="flex flex-col sm:flex-row gap-6">
+              <div className="flex items-center gap-4 bg-white border-2 border-gray-200 rounded-xl px-6 py-4">
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="lg"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={quantity <= 1}
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-5 w-5" />
                 </Button>
-                <span className="w-12 text-center text-gray-900">{quantity}</span>
+                <span className="text-2xl font-bold w-16 text-center">{quantity}</span>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="lg"
                   onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                  disabled={quantity >= product.stock}
+                  disabled={quantity >= product.stock || product.stock === 0}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-5 w-5" />
                 </Button>
               </div>
 
               <Button
                 size="lg"
-                className="flex-1"
+                className="flex-1 text-lg py-8 font-semibold"
                 onClick={handleAddToCart}
                 disabled={product.stock === 0 || added}
               >
                 {added ? (
                   <>
-                    <Check className="mr-2 h-5 w-5" />
-                    Đã thêm
+                    <Check className="mr-3 h-6 w-6" />
+                    Đã thêm vào giỏ!
                   </>
                 ) : (
                   <>
-                    <ShoppingCart className="mr-2 h-5 w-5" />
+                    <ShoppingCart className="mr-3 h-6 w-6" />
                     Thêm vào giỏ hàng
                   </>
                 )}
               </Button>
             </div>
 
-            <div className="mt-6 text-sm text-gray-600">
-              <p className="mb-2">Total: {formatPrice(product.price * quantity)}</p>
-            </div>
+            <p className="mt-6 text-xl font-semibold text-gray-800">
+              Thành tiền: {formatPrice(product.price * quantity)}
+            </p>
           </div>
         </div>
 
-        {/* Related Products */}
+        {/* Sản phẩm liên quan */}
         {relatedProducts.length > 0 && (
-          <div>
-            <h2 className="text-2xl mb-6 text-gray-900">Sản phẩm liên quan</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((relatedProduct) => (
+          <div className="mt-20">
+            <h2 className="text-3xl font-bold mb-10 text-gray-900">Sản phẩm liên quan</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {relatedProducts.map((p) => (
                 <Card
-                  key={relatedProduct.id}
-                  className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                  key={p.id}
+                  className="overflow-hidden hover:shadow-2xl transition-all cursor-pointer group"
                   onClick={() => {
-                    onNavigate('product-detail');
+                    // Cập nhật productId để reload chi tiết mới
+                    window.location.href = `/product/${p.id}`; // hoặc dùng onNavigate nếu bạn có router
                     window.scrollTo(0, 0);
                   }}
                 >
                   <div className="aspect-square overflow-hidden bg-gray-100">
                     <ImageWithFallback
-                      src={relatedProduct.image}
-                      alt={relatedProduct.name}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform"
+                      src={p.image}
+                      alt={p.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
                   </div>
-                  <CardContent className="p-4">
-                    <h3 className="mb-2 text-gray-900 line-clamp-1">
-                      {relatedProduct.name}
-                    </h3>
-                    <p className="text-lg text-blue-600">
-                      {formatPrice(relatedProduct.price)}
+                  <CardContent className="p-5">
+                    <p className="text-sm text-blue-600 mb-1">{p.category}</p>
+                    <h3 className="font-semibold text-lg line-clamp-2 mb-3">{p.name}</h3>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {formatPrice(p.price)}
                     </p>
                   </CardContent>
                 </Card>

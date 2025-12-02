@@ -5,6 +5,12 @@ import Category from "./Category.js";
 const Product = sequelize.define("Product", {
   product_id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   category_id: { type: DataTypes.INTEGER, references: { model: "categories", key: "category_id" } },
+  category_name: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.Category ? this.Category.category_name : 'Chưa phân loại';
+    }
+  },
   product_name: { type: DataTypes.STRING(100), allowNull: false },
   description: { type: DataTypes.TEXT },
   price: { type: DataTypes.DECIMAL(10, 2), allowNull: false },

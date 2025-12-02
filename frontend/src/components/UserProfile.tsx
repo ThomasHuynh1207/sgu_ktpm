@@ -74,7 +74,7 @@ export function UserProfile({ onNavigate, user, setUser }: UserProfileProps) {
             <CardContent className="pt-6 text-center">
               <Avatar className="w-32 h-32 mx-auto mb-4">
                 <AvatarFallback className="text-4xl bg-blue-600 text-white">
-                  {user.username[0].toUpperCase()}
+                  <UserIcon className="w-16 h-16" />
                 </AvatarFallback>
               </Avatar>
               <h2 className="text-2xl font-bold text-gray-900">{user.username}</h2>

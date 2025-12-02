@@ -1,4 +1,4 @@
-import { useState , useEffect} from 'react';
+import { useState, useEffect } from 'react';
 import { Home } from './components/Home';
 import { ProductCatalog } from './components/ProductCatalog';
 import { ProductDetail } from './components/ProductDetail';
@@ -11,9 +11,6 @@ import { OrderHistory } from './components/OrderHistory';
 import { UserProfile } from './components/UserProfile';
 import { Header } from './components/Header';
 
-
-
-
 import type { Product, CartItem, User, Order } from './types';
 
 export default function App() {
@@ -24,33 +21,60 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
 
+  // 1. KHÔI PHỤC giỏ hàng từ localStorage khi mở trang
   useEffect(() => {
-  const savedUser = localStorage.getItem('user');
-  const token = localStorage.getItem('token');
-  if (savedUser && token) {
-    try {
-      const parsed = JSON.parse(savedUser);
-      setUser({
-        id: parsed.user_id || parsed.id,
-        username: parsed.username,
-        email: parsed.email,
-        role: parsed.role,
-      });
-    } catch (e) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+    const savedCart = localStorage.getItem('techstore_cart');
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (e) {
+        localStorage.removeItem('techstore_cart');
+      }
     }
-  }
-}, []);
+  }, []);
 
+  // 2. LƯU giỏ hàng mỗi khi thay đổi
+  useEffect(() => {
+    if (cart.length > 0) {
+      localStorage.setItem('techstore_cart', JSON.stringify(cart));
+    } else {
+      localStorage.removeItem('techstore_cart');
+    }
+  }, [cart]);
+
+  // Khôi phục user khi reload
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    if (savedUser && token) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        setUser({
+          id: parsed.user_id || parsed.id,
+          username: parsed.username,
+          email: parsed.email,
+          role: parsed.role,
+        });
+      } catch (e) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      }
+    }
+  }, []);
+
+  // TÍNH TỔNG SỐ LƯỢNG trong giỏ hàng (đúng 100%)
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  // ĐĂNG XUẤT: XÓA USER + GIỎ HÀNG + TOKEN
   const handleLogout = () => {
-    window.location.reload();
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('techstore_cart'); // xóa giỏ hàng khi logout
     setUser(null);
-    setCart([]); // xóa giỏ hàng khi logout (tùy chọn)
+    setCart([]);
     setCurrentPage('home');
     alert('Đã đăng xuất thành công!');
   };
-
 
   const addToCart = (product: Product, quantity: number = 1) => {
     setCart(prevCart => {
@@ -68,10 +92,10 @@ export default function App() {
 
   const updateCartQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
-      setCart(prevCart => prevCart.filter(item => item.product.id !== productId));
+      removeFromCart(productId);
     } else {
-      setCart(prevCart =>
-        prevCart.map(item =>
+      setCart(prev =>
+        prev.map(item =>
           item.product.id === productId ? { ...item, quantity } : item
         )
       );
@@ -79,12 +103,10 @@ export default function App() {
   };
 
   const removeFromCart = (productId: string) => {
-    setCart(prevCart => prevCart.filter(item => item.product.id !== productId));
+    setCart(prev => prev.filter(item => item.product.id !== productId));
   };
 
-  const clearCart = () => {
-    setCart([]);
-  };
+  const clearCart = () => setCart([]);
 
   const viewProductDetail = (productId: string) => {
     setSelectedProductId(productId);
@@ -102,129 +124,53 @@ export default function App() {
       id: `ORD-${Date.now()}`,
       date: new Date().toISOString(),
     };
-    setOrders(prevOrders => [...prevOrders, newOrder]);
+    setOrders(prev => [...prev, newOrder]);
     clearCart();
     setCurrentPage('order-history');
   };
 
-
-  
-
-
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return (
-          <Home
-            onNavigate={setCurrentPage}
-            onViewProduct={viewProductDetail}
-            onNavigateToProducts={navigateToProducts}
-            addToCart={addToCart}
-          />
-        );
+        return <Home onNavigate={setCurrentPage} onViewProduct={viewProductDetail} onNavigateToProducts={navigateToProducts} addToCart={addToCart} />;
       case 'products':
-        return (
-          <ProductCatalog
-            onNavigate={setCurrentPage}
-            onViewProduct={viewProductDetail}
-            selectedCategory={selectedCategory}
-            addToCart={addToCart}
-          />
-        );
+        return <ProductCatalog onNavigate={setCurrentPage} onViewProduct={viewProductDetail} selectedCategory={selectedCategory} addToCart={addToCart} />;
       case 'product-detail':
-        return (
-          <ProductDetail
-            productId={selectedProductId}
-            onNavigate={setCurrentPage}
-            addToCart={addToCart}
-          />
-        );
+        return <ProductDetail productId={selectedProductId} onNavigate={setCurrentPage} addToCart={addToCart} />;
       case 'cart':
-        return (
-          <Cart
-            cart={cart}
-            onNavigate={setCurrentPage}
-            updateQuantity={updateCartQuantity}
-            removeItem={removeFromCart}
-          />
-        );
+        return <Cart cart={cart} onNavigate={setCurrentPage} updateQuantity={updateCartQuantity} removeItem={removeFromCart} />;
       case 'checkout':
-        return (
-          <Checkout
-            cart={cart}
-            user={user}
-            onNavigate={setCurrentPage}
-            placeOrder={placeOrder}
-          />
-        );
+        return <Checkout cart={cart} user={user} onNavigate={setCurrentPage} placeOrder={placeOrder} />;
       case 'login':
-        return (
-          <Login
-            onNavigate={setCurrentPage}
-            setUser={setUser}
-          />
-        );
+        return <Login onNavigate={setCurrentPage} setUser={setUser} />;
       case 'register':
-        return (
-          <Register
-            onNavigate={setCurrentPage}
-            setUser={setUser}
-          />
-        );
+        return <Register onNavigate={setCurrentPage} setUser={setUser} />;
       case 'admin':
-        return (
-          <AdminDashboard
-            onNavigate={setCurrentPage}
-            user={user}
-            orders={orders}
-            setOrders={setOrders}
-          />
-        );
+        return <AdminDashboard onNavigate={setCurrentPage} user={user} orders={orders} setOrders={setOrders} />;
       case 'order-history':
-        return (
-          <OrderHistory
-            onNavigate={setCurrentPage}
-            orders={orders}
-            user={user}
-          />
-        );
+        return <OrderHistory onNavigate={setCurrentPage} orders={orders} user={user} />;
       case 'profile':
-        return (
-          <UserProfile
-            onNavigate={setCurrentPage}
-            user={user}
-            setUser={setUser}
-          />
-        );
+        return <UserProfile onNavigate={setCurrentPage} user={user} setUser={setUser} />;
       default:
-        return (
-          <Home
-            onNavigate={setCurrentPage}
-            onViewProduct={viewProductDetail}
-            onNavigateToProducts={navigateToProducts}
-            addToCart={addToCart}
-          />
-        );
+        return <Home onNavigate={setCurrentPage} onViewProduct={viewProductDetail} onNavigateToProducts={navigateToProducts} addToCart={addToCart} />;
     }
   };
 
   return (
-  <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header – ẩn khi login/register */}
+      {currentPage !== 'login' && currentPage !== 'register' && (
+        <Header
+          onNavigate={setCurrentPage}
+          cartCount={cartCount}
+          user={user}
+          setUser={setUser}
+        />
+      )}
 
-    {/* ẨN HEADER KHI ĐĂNG NHẬP / ĐĂNG KÝ */}
-    {currentPage !== 'login' && currentPage !== 'register' &&  (
-      <Header
-        onNavigate={setCurrentPage}
-        cartCount={cart.length}
-        user={user}
-        setUser={setUser}
-      />
-    )}
-
-    {/* Nội dung trang */}
-    <main className={currentPage === 'login' || currentPage === 'register' ? 'pt-0' : 'pt-16'}>
-      {renderPage()}
-    </main>
-  </div>
-);
+      <main className={currentPage === 'login' || currentPage === 'register' ? 'pt-0' : 'pt-16'}>
+        {renderPage()}
+      </main>
+    </div>
+  );
 }

@@ -1,9 +1,10 @@
+// src/components/pages/Home.tsx
+import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Navbar } from './Navbar';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Monitor, Laptop, ShoppingBag, Headphones, Keyboard, Mouse } from 'lucide-react';
-import { products, categories } from '../data/products';
+import { categories } from '../data/products';   // vẫn giữ categories cũ để hiển thị icon
 import type { Product } from '../types';
 
 type HomeProps = {
@@ -14,7 +15,38 @@ type HomeProps = {
 };
 
 export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCart }: HomeProps) {
-  const featuredProducts = products.slice(0, 6);
+  // ===== CHỈ THÊM ĐOẠN NÀY ĐỂ LẤY DỮ LIỆU THẬT =====
+  const [realProducts, setRealProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/products')
+      .then(res => res.json())
+      .then(data => {
+        const normalized = data.map((p: any) => ({
+          id: p.product_id?.toString() || p.id,
+          product_name: p.product_name,
+          name: p.product_name,
+          category: p.category || 'Chưa phân loại',
+          category_id: Number(p.category_id) || 0,
+          price: Number(p.price),
+          description: p.description || '',
+          image: p.image || 'https://via.placeholder.com/400',
+          specs: p.specs || [],
+          stock: Number(p.stock) || 0,
+        }));
+        setRealProducts(normalized);
+        setLoading(false);
+      })
+      .catch(() => {
+        setRealProducts([]);
+        setLoading(false);
+      });
+  }, []);
+  // ================================================
+
+  // Dùng 6 sản phẩm thật đầu tiên (hoặc ngẫu nhiên)
+  const featuredProducts = loading ? [] : realProducts.slice(0, 6);
 
   const categoryIcons: { [key: string]: any } = {
     'Desktop PC': Monitor,
@@ -26,7 +58,7 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
+    return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
       minimumFractionDigits: 0,
@@ -36,7 +68,7 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* Hero Section */}
+      {/* Hero Section – giữ nguyên */}
       <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -56,7 +88,7 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
         </div>
       </section>
 
-      {/* Categories */}
+      {/* Categories – giữ nguyên */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl text-center mb-12 text-gray-900">Danh mục sản phẩm</h2>
@@ -82,7 +114,7 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
         </div>
       </section>
 
-      {/* Featured Products */}
+      {/* Featured Products – CHỈ THAY ĐOẠN NÀY DÙNG DỮ LIỆU THẬT */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-12">
@@ -135,7 +167,7 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
         </div>
       </section>
 
-      {/* Features */}
+      {/* 3 ô cam kết – giữ nguyên */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -170,7 +202,7 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Footer – giữ nguyên */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
