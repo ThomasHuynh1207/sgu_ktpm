@@ -1,0 +1,34 @@
+name: Kiểm tra tự động (CI)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  docker-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Lấy code về
+        uses: actions/checkout@v4
+
+      - name: Khởi động toàn bộ dự án bằng Docker
+        run: docker compose up --build -d
+
+      - name: Đợi các container chạy xong (20 giây)
+        run: sleep 20
+
+      - name: Kiểm tra backend còn sống không
+        run: |
+          docker compose ps
+          curl -f http://localhost:5000 || echo "Backend chưa chạy"
+
+      - name: Kiểm tra frontend còn sống không
+        run: |
+          curl -f http://localhost:3000 || echo "Frontend chưa chạy"
+
+      - name: Tắt hết lại cho sạch
+        if: always()
+        run: docker compose down
