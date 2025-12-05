@@ -152,7 +152,7 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
                 </div>
                 <div className="px-6 pb-6">
                   <Button
-                    className="w-full"
+                    className="w-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                     onClick={(e) => {
                       e.stopPropagation();
                       addToCart(product, 1);
