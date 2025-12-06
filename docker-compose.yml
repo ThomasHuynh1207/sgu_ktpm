@@ -1,45 +1,64 @@
+version: "3.9"
+
 services:
   postgres_db:
-    image: postgres:17
+    image: postgres:17-alpine
     container_name: postgres_db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123
+      POSTGRES_PASSWORD: "123"
       POSTGRES_DB: doan_db
     volumes:
       - doan_pgdata:/var/lib/postgresql/data
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend_app:
     build: ./backend
     container_name: backend_app
+    restart: unless-stopped
     ports:
       - "5000:5000"
     depends_on:
-      - postgres_db
+      postgres_db:
+        condition: service_healthy
     environment:
-      - DB_HOST=postgres_db
-      - DB_USER=postgres
-      - DB_PASSWORD=123
-      - DB_NAME=doan_db
+      DB_HOST: postgres_db
+      DB_USER: postgres
+      DB_PASSWORD: 123
+      DB_NAME: doan_db
     volumes:
       - ./backend:/app
+      - /app/
     command: npm run dev
-
+    
 
   frontend_app:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      # Cache npm siêu nhanh từ lần thứ 2 (chỉ cần 2 dòng này)
+      args:
+        - NPM_REGISTRY=https://registry.npmmirror.com
     container_name: frontend_app
-    restart: always
-    depends_on:
-      - backend_app
+    restart: unless-stopped
     ports:
       - "5173:5173"
-    command: npm run dev -- --host
+    depends_on:
+      - backend_app
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   doan_pgdata:

@@ -1,17 +1,41 @@
+// backend/src/middleware/authMiddleware.js
+
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
+import User from "../models/User.js";
 
-dotenv.config();
+// Bảo vệ route – kiểm tra JWT
+export const protect = async (req, res, next) => {
+  let token;
 
-export const authMiddleware = (req, res, next) => {
-  const token = req.header("Authorization")?.split(" ")[1];
-  if (!token) return res.status(401).json({ message: "Không có token, vui lòng đăng nhập" });
+  if (req.headers.authorization?.startsWith("Bearer")) {
+    try {
+      token = req.headers.authorization.split(" ")[1];
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || "abc123");
+
+      req.user = await User.findByPk(decoded.id, {
+        attributes: { exclude: ["password"] },
+      });
+
+      if (!req.user) {
+        return res.status(401).json({ message: "Không tìm thấy người dùng" });
+      }
+
+      next();
+    } catch (error) {
+      console.error(error);
+      return res.status(401).json({ message: "Token không hợp lệ" });
+    }
+  } else {
+    return res.status(401).json({ message: "Không có token, truy cập bị từ chối" });
+  }
+};
+
+// Chỉ cho admin dùng
+export const admin = (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
     next();
-  } catch {
-    res.status(401).json({ message: "Token không hợp lệ" });
+  } else {
+    res.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
   }
 };

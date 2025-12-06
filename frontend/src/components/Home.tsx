@@ -1,11 +1,12 @@
-// src/components/pages/Home.tsx
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Monitor, Laptop, ShoppingBag, Headphones, Keyboard, Mouse } from 'lucide-react';
-import { categories } from '../data/products';   // vẫn giữ categories cũ để hiển thị icon
+import { categories } from '../data/products'; // giữ lại để hiển thị icon
 import type { Product } from '../types';
+import { Badge } from './ui/badge';
+import { Package }  from 'lucide-react';
 
 type HomeProps = {
   onNavigate: (page: string) => void;
@@ -15,40 +16,41 @@ type HomeProps = {
 };
 
 export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCart }: HomeProps) {
-  // ===== CHỈ THÊM ĐOẠN NÀY ĐỂ LẤY DỮ LIỆU THẬT =====
   const [realProducts, setRealProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('http://localhost:5000/api/products')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Không tải được sản phẩm');
+        return res.json();
+      })
       .then(data => {
-        const normalized = data.map((p: any) => ({
-          id: p.product_id?.toString() || p.id,
+        const normalized: Product[] = data.map((p: any) => ({
+          product_id: p.product_id,
+          id: p.product_id.toString(), // quan trọng: tạo id string cho frontend
           product_name: p.product_name,
           name: p.product_name,
-          category: p.category || 'Chưa phân loại',
+          category: p.category_name || 'Chưa phân loại',
           category_id: Number(p.category_id) || 0,
           price: Number(p.price),
-          description: p.description || '',
+          description: p.description || 'Không có mô tả',
           image: p.image || 'https://via.placeholder.com/400',
-          specs: p.specs || [],
+          specs: Array.isArray(p.specs) ? p.specs : [],
           stock: Number(p.stock) || 0,
         }));
         setRealProducts(normalized);
-        setLoading(false);
       })
-      .catch(() => {
+      .catch(err => {
+        console.error(err);
         setRealProducts([]);
-        setLoading(false);
-      });
+      })
+      .finally(() => setLoading(false));
   }, []);
-  // ================================================
 
-  // Dùng 6 sản phẩm thật đầu tiên (hoặc ngẫu nhiên)
-  const featuredProducts = loading ? [] : realProducts.slice(0, 6);
+  const featuredProducts = realProducts.slice(0, 6);
 
-  const categoryIcons: { [key: string]: any } = {
+  const categoryIcons: Record<string, any> = {
     'Desktop PC': Monitor,
     'Laptop': Laptop,
     'Monitor': Monitor,
@@ -67,8 +69,7 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
 
   return (
     <div className="min-h-screen bg-gray-50">
-
-      {/* Hero Section – giữ nguyên */}
+      
       <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -88,23 +89,21 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
         </div>
       </section>
 
-      {/* Categories – giữ nguyên */}
+      {/* Categories */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl text-center mb-12 text-gray-900">Danh mục sản phẩm</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
             {categories.map((category) => {
-              const Icon = categoryIcons[category];
+              const Icon = categoryIcons[category] || Package;
               return (
                 <Card
                   key={category}
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  className="cursor-pointer hover:shadow-lg transition-shadow text-center"
                   onClick={() => onNavigateToProducts(category)}
                 >
-                  <CardContent className="p-6 text-center">
-                    <div className="flex justify-center mb-3">
-                      <Icon className="h-12 w-12 text-blue-600" />
-                    </div>
+                  <CardContent className="p-6">
+                    <Icon className="h-12 w-12 text-blue-600 mx-auto mb-3" />
                     <p className="text-gray-900">{category}</p>
                   </CardContent>
                 </Card>
@@ -114,60 +113,77 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
         </div>
       </section>
 
-      {/* Featured Products – CHỈ THAY ĐOẠN NÀY DÙNG DỮ LIỆU THẬT */}
+      {/* Featured Products */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-12">
             <h2 className="text-3xl text-gray-900">Sản phẩm nổi bật</h2>
             <Button variant="outline" onClick={() => onNavigateToProducts()}>
-              Xem Tất Cả
+              Xem tất cả
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredProducts.map((product) => (
-              <Card
-                key={product.id}
-                className="overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
-              >
-                <div onClick={() => onViewProduct(product.id)}>
-                  <div className="aspect-[4/3] overflow-hidden bg-gray-100">
-                    <ImageWithFallback
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform"
-                    />
+          {loading ? (
+            <div className="text-center py-20">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+              <p className="mt-4 text-gray-600">Đang tải sản phẩm...</p>
+            </div>
+          ) : featuredProducts.length === 0 ? (
+            <div className="text-center py-20 text-gray-500">Chưa có sản phẩm nào</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredProducts.map((product) => (
+                <Card
+                  key={product.product_id}
+                  className="overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer group"
+                >
+                  {/* Click vào ảnh hoặc nội dung → xem chi tiết */}
+                  <div onClick={() => onViewProduct(product.id)}>
+                    <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
+                      <ImageWithFallback
+                        src={product.image}
+                        alt={product.product_name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    </div>
+                    <CardContent className="p-6">
+                      <Badge className="mb-2">{product.category}</Badge>
+                      <h3 className="text-xl font-bold mb-3 text-gray-900 line-clamp-2">
+                        {product.product_name}
+                      </h3>
+                      <p className="text-gray-600 mb-4 line-clamp-2">{product.description}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl font-bold text-blue-600">
+                          {formatPrice(product.price)}
+                        </span>
+                        <span className={`text-sm font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {product.stock > 0 ? `Còn ${product.stock}` : 'Hết hàng'}
+                        </span>
+                      </div>
+                    </CardContent>
                   </div>
-                  <CardContent className="p-6">
-                    <div className="mb-2">
-                      <span className="text-sm text-blue-600">{product.category}</span>
-                    </div>
-                    <h3 className="text-xl mb-2 text-gray-900">{product.name}</h3>
-                    <p className="text-gray-600 mb-4 line-clamp-2">{product.description}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl text-blue-600">{formatPrice(product.price)}</span>
-                      <span className="text-sm text-gray-500">Tồn : {product.stock}</span>
-                    </div>
-                  </CardContent>
-                </div>
-                <div className="px-6 pb-6">
-                  <Button
-                    className="w-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      addToCart(product, 1);
-                    }}
-                  >
-                    Thêm vào giỏ hàng
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+
+                  {/* Nút thêm giỏ hàng */}
+                  <div className="px-6 pb-6">
+                    <Button
+                      className="w-full"
+                      disabled={product.stock === 0}
+                      onClick={(e) => {
+                        e.stopPropagation(); // ngăn click lan ra card
+                        addToCart(product, 1);
+                      }}
+                    >
+                      {product.stock === 0 ? 'Hết hàng' : 'Thêm vào giỏ'}
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* 3 ô cam kết – giữ nguyên */}
+      {/* 3 ô cam kết */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -176,72 +192,64 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
                 <ShoppingBag className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl mb-2 text-gray-900">Mua sắm dễ dàng</h3>
-              <p className="text-gray-600">
-                Quy trình mua hàng nhanh chóng và dễ dàng với nhiều phương thức thanh toán khác nhau
-              </p>
+              <p className="text-gray-600">Quy trình mua hàng nhanh chóng và dễ dàng</p>
             </div>
             <div className="text-center">
               <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Monitor className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl mb-2 text-gray-900">Sản phẩm chất lượng</h3>
-              <p className="text-gray-600">
-                Tất cả sản phẩm đều là hàng chính hãng và được bảo hành chính thức từ nhà phân phối.
-              </p>
+              <p className="text-gray-600">Hàng chính hãng, bảo hành đầy đủ</p>
             </div>
             <div className="text-center">
               <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Headphones className="h-8 w-8 text-blue-600" />
               </div>
-              <h3 className="text-xl mb-2 text-gray-900">Hỗ trợ khách hàng</h3>
-              <p className="text-gray-600">
-                Đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng hỗ trợ bạn 24/7 về các câu hỏi liên quan đến sản phẩm.
-              </p>
+              <h3 className="text-xl mb-2 text-gray-900">Hỗ trợ 24/7</h3>
+              <p className="text-gray-600">Đội ngũ luôn sẵn sàng hỗ trợ bạn</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer – giữ nguyên */}
+      {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Monitor className="h-8 w-8 text-blue-400" />
-                <span className="text-xl">TechStore</span>
+                <span className="text-xl font-bold">TechStore</span>
               </div>
-              <p className="text-gray-400">
-                Cửa hàng máy tính và phụ kiện uy tín từ năm 2020
-              </p>
+              <p className="text-gray-400">Cửa hàng máy tính uy tín từ 2020</p>
             </div>
             <div>
-              <h4 className="mb-4">Loại</h4>
+              <h4 className="mb-4">Danh mục</h4>
               <ul className="space-y-2 text-gray-400">
-                <li className="cursor-pointer hover:text-white">Desktop PC</li>
-                <li className="cursor-pointer hover:text-white">Laptop</li>
-                <li className="cursor-pointer hover:text-white">Phụ kiện</li>
+                {categories.slice(0, 3).map(cat => (
+                  <li key={cat} className="hover:text-white cursor-pointer">{cat}</li>
+                ))}
               </ul>
             </div>
             <div>
-              <h4 className="mb-4">Giúp đỡ</h4>
+              <h4 className="mb-4">Hỗ trợ</h4>
               <ul className="space-y-2 text-gray-400">
-                <li className="cursor-pointer hover:text-white">Mua sắm</li>
-                <li className="cursor-pointer hover:text-white">Chi phí</li>
-                <li className="cursor-pointer hover:text-white">Vận chuyển</li>
+                <li className="hover:text-white cursor-pointer">Hướng dẫn mua hàng</li>
+                <li className="hover:text-white cursor-pointer">Chính sách bảo hành</li>
+                <li className="hover:text-white cursor-pointer">Vận chuyển</li>
               </ul>
             </div>
             <div>
               <h4 className="mb-4">Liên hệ</h4>
               <ul className="space-y-2 text-gray-400">
-                <li>Email: info@techstore.com</li>
-                <li>Telp: (021) 1234-5678</li>
-                <li>WA: 0812-3456-7890</li>
+                <li>info@techstore.com</li>
+                <li>Hotline: 1900 1234</li>
+                <li>Facebook: fb.com/techstore</li>
               </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 TechStore. All rights reserved.</p>
+            <p>&copy; 2025 TechStore. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -1,24 +1,21 @@
-# Sử dụng image Node chính thức
-FROM node:18-alpine
+# frontend/Dockerfile
+FROM node:20-alpine
 
-# Đặt thư mục làm việc trong container
 WORKDIR /app
 
-# Sao chép file package vào container để cài đặt dependencies
+# Dùng mirror VN (có thể truyền từ compose args cũng được)
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+RUN npm config set registry $NPM_REGISTRY
+
+# Cache npm toàn cục – lần đầu chậm, lần sau instant
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g esbuild@latest --unsafe-perm=true
+
 COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
 
-# Cài đặt dependencies
-RUN npm install
-
-# Sao chép toàn bộ mã nguồn vào container
 COPY . .
 
-# Build dự án (chỉ cần nếu bạn muốn chạy bản build production)
-# RUN npm run build
-
-# Mở port (Vite mặc định là 5173)
 EXPOSE 5173
-
-# Lệnh khởi chạy ứng dụng
-CMD ["npm", "run", "dev", "--", "--host"]
-
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

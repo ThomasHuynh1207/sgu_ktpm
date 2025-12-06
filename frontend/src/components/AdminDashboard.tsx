@@ -101,8 +101,8 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
       day: 'numeric',
     });
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const pendingOrders = orders.filter((o) => o.status === 'pending').length;
+  const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
+  const pendingOrders = orders.filter((order) => orders.o === 'pending').length;
 
   const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
     setOrders(
@@ -564,15 +564,15 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
             <h2 className="text-2xl text-gray-900">Danh sách đơn hàng</h2>
             <div className="grid gap-4">
               {orders.map((order) => (
-                <Card key={order.id}>
+                <Card key={order.order_id}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="text-lg text-gray-900 mb-1">Đơn hàng #{order.id}</h3>
-                        <p className="text-sm text-gray-600">{formatDate(order.date)}</p>
+                        <h3 className="text-lg text-gray-900 mb-1">Đơn hàng #{order.order_id}</h3>
+                        <p className="text-sm text-gray-600">{formatDate(order.order_date)}</p>
                       </div>
                       <Badge>
-                        {order.status === 'pending' && 'Chưa xử lý'}
+                        {status === 'pending' && 'Chưa xử lý'}
                         {order.status === 'processing' && 'Đang xử lý'}
                         {order.status === 'shipped' && 'Đã gửi'}
                         {order.status === 'delivered' && 'Hoàn thành'}
@@ -589,11 +589,11 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                     <div className="flex justify-between items-center pt-4 border-t">
                       <div>
                         <p className="text-sm text-gray-600">Tổng cộng</p>
-                        <p className="text-xl text-blue-600">{formatPrice(order.total)}</p>
+                        <p className="text-xl text-blue-600">{formatPrice(order.total_amount)}</p>
                       </div>
                       <div className="flex gap-2">
                         {order.status === 'pending' && (
-                          <Button size="sm" onClick={() => updateOrderStatus(order.id, 'processing')}>
+                          <Button size="sm" onClick={() => updateOrderStatus(order.order_id, 'processing')}>
                             Xử lý
                           </Button>
                         )}

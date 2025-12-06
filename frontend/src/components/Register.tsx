@@ -55,7 +55,7 @@ export function Register({ onNavigate, setUser }: RegisterProps) {
 
       alert('✅ Đăng ký thành công!');
       setUser({
-        id: newUser.user_id,
+        user_id: newUser.user_id,
         username: newUser.username,
         email: newUser.email,
         role: newUser.role,

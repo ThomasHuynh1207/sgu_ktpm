@@ -33,7 +33,7 @@ export function UserProfile({ onNavigate, user, setUser }: UserProfileProps) {
 
       // Cập nhật localStorage để F5 vẫn giữ thông tin mới
       localStorage.setItem('user', JSON.stringify({
-        user_id: user.id,
+        user_id: user.user_id,
         username: formData.username,
         email: formData.email,
         role: user.role,

@@ -53,7 +53,7 @@ export function Login({ onNavigate, setUser }: LoginProps) {
       
       // Thành:
       setUser({
-        id: data.user.user_id || data.user.id,        // ← quan trọng
+        user_id: data.user.user_id || data.user.id,        // ← quan trọng
         username: data.user.username,
         email: data.user.email,
         role: data.user.role,
