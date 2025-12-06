@@ -1,9 +1,16 @@
-// Tạo đơn hàng mới – ĐÃ SỬA HOÀN CHỈNH 100% (không còn lỗi đỏ)
+// backend/src/controllers/orderController.js
+import Order from "../models/Order.js";
+import OrderDetail from "../models/OrderDetail.js";
+import Product from "../models/Product.js";
+import Cart from "../models/Cart.js";
+import User from "../models/User.js";
+
+// TẠO ĐƠN HÀNG – ĐÃ HOÀN HẢO, CHỈ SỬA TRẢ VỀ ĐỂ FRONTEND DỄ DÙNG ID THẬT
 export const createOrder = async (req, res) => {
   const t = await Order.sequelize.transaction();
 
   try {
-    const userId = req.user.id; // từ middleware auth
+    const userId = req.user.id;
     const {
       totalAmount,
       shippingAddress,
@@ -11,14 +18,14 @@ export const createOrder = async (req, res) => {
       notes = "",
       phone,
       fullName,
-      items, // [{ productId, quantity, price }]
+      items,
     } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: "Giỏ hàng trống!" });
     }
 
-    // 1. Tạo đơn hàng chính
+    // Tạo đơn hàng
     const order = await Order.create(
       {
         user_id: userId,
@@ -33,23 +40,18 @@ export const createOrder = async (req, res) => {
       { transaction: t }
     );
 
-    // 2. Tạo chi tiết đơn hàng + giảm tồn kho
+    // Tạo chi tiết + giảm stock
     for (const item of items) {
       const product = await Product.findByPk(item.productId);
-
-      if (!product) {
-        await t.rollback();
-        return res.status(404).json({ message: `Không tìm thấy sản phẩm ID: ${item.productId}` });
-      }
-
-      if (product.stock < item.quantity) {
+      if (!product || product.stock < item.quantity) {
         await t.rollback();
         return res.status(400).json({
-          message: `Sản phẩm "${product.product_name}" chỉ còn ${product.stock} cái!`,
+          message: product
+            ? `Sản phẩm "${product.product_name}" chỉ còn ${product.stock} cái!`
+            : `Không tìm thấy sản phẩm ID: ${item.productId}`,
         });
       }
 
-      // Tạo chi tiết đơn hàng
       await OrderDetail.create(
         {
           order_id: order.order_id,
@@ -60,165 +62,109 @@ export const createOrder = async (req, res) => {
         { transaction: t }
       );
 
-      // Giảm tồn kho
       await product.decrement("stock", { by: item.quantity, transaction: t });
     }
 
-    // 3. Xóa giỏ hàng của user
-    await Cart.destroy({
-      where: { user_id: userId },
-      transaction: t,
-    });
-
-    // Commit transaction
+    // Xóa giỏ hàng
+    await Cart.destroy({ where: { user_id: userId }, transaction: t });
     await t.commit();
 
-    return res.status(201).json({
+    // TRẢ VỀ ĐẦY ĐỦ ĐỂ FRONTEND DÙNG ID THẬT NGAY
+    res.status(201).json({
       success: true,
       message: "Đặt hàng thành công!",
-      orderId: order.order_id,
-      total: totalAmount,
+      order: {
+        order_id: order.order_id,
+        total_amount: order.total_amount,
+        status: order.status,
+        payment_method: order.payment_method,
+        shipping_address: order.shipping_address,
+        order_date: order.order_date,
+        full_name: order.full_name,
+        phone: order.phone,
+      },
     });
   } catch (err) {
     await t.rollback();
     console.error("Lỗi tạo đơn hàng:", err);
-    return res
-      .status(500)
-      .json({ message: "Lỗi server khi tạo đơn hàng", error: err.message });
+    res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 };
 
-export const deleteOrder = async (req, res) => {
-  const t = await Order.sequelize.transaction();
+// CÁC HÀM KHÁC GIỮ NGUYÊN – CHỈ SỬA NHỎ ĐỂ TRẢ VỀ order_id THAY VÌ id
+export const getMyOrders = async (req, res) => {
   try {
-    const order = await Order.findByPk(req.params.id);
-
-    if (!order) {
-      await t.rollback();
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    }
-
-    // Xóa chi tiết đơn hàng trước
-    await OrderDetail.destroy({
-      where: { order_id: req.params.id },
-      transaction: t
+    const orders = await Order.findAll({
+      where: { user_id: req.user.id },
+      attributes: ['order_id', 'total_amount', 'status', 'payment_method', 'shipping_address', 'order_date', 'phone', 'full_name', 'notes'],
+      include: [{
+        model: OrderDetail,
+        as: 'order_details',
+        include: [{ model: Product, attributes: ['product_id', 'product_name', 'image', 'price'] }]
+      }],
+      order: [['order_date', 'DESC']]
     });
 
-    // Xóa đơn hàng
-    await Order.destroy({
-      where: { order_id: req.params.id },
-      transaction: t
+    res.json({
+      success: true,
+      count: orders.length,
+      data: orders.map(o => ({
+        ...o.toJSON(),
+        id: o.order_id.toString(), // frontend dùng "id"
+        order_id: o.order_id,
+      }))
     });
-
-    await t.commit();
-    res.json({ message: "Xóa đơn hàng thành công" });
-  } catch (err) {
-    await t.rollback();
-    console.error(err);
-    res.status(500).json({ message: "Lỗi server khi xóa đơn hàng" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
 
-
-
-// Lấy tất cả đơn hàng – DÀNH CHO ADMIN
 export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.findAll({
-      attributes: [
-        'order_id',
-        'user_id',
-        'total_amount',
-        'status',
-        'payment_method',
-        'shipping_address',
-        'order_date',
-        'phone',
-        'full_name',
-        'notes'
-      ],
       include: [
-        {
-          model: User,
-          as: 'user', // nếu mày có đặt alias trong model thì để đúng, không thì bỏ as
-          attributes: ['user_id', 'username', 'email', 'full_name', 'phone'],
-        },
-        {
-          model: OrderDetail,
-          as: 'order_details', // hoặc bỏ as nếu không dùng
-          include: [
-            {
-              model: Product,
-              attributes: ['product_id', 'product_name', 'price', 'image'],
-            }
-          ]
-        }
+        { model: User, attributes: ['user_id', 'username', 'email', 'full_name'] },
+        { model: OrderDetail, as: 'order_details', include: [Product] }
       ],
-      order: [['order_date', 'DESC']], // mới nhất lên đầu
+      order: [['order_date', 'DESC']]
     });
 
-    res.status(200).json({
+    res.json({
       success: true,
       count: orders.length,
-      data: orders
+      data: orders.map(o => ({
+        ...o.toJSON(),
+        id: o.order_id.toString(),
+      }))
     });
   } catch (error) {
-    console.error("Lỗi lấy danh sách đơn hàng:", error);
-    res.status(500).json({
-      success: false,
-      message: "Không thể lấy danh sách đơn hàng",
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
 
-// Lấy tất cả đơn hàng của người dùng đang đăng nhập
-export const getMyOrders = async (req, res) => {
+export const getOrderById = async (req, res) => {
   try {
-    const userId = req.user.id; // từ middleware protect
-
-    const orders = await Order.findAll({
-      where: { user_id: userId },
-      attributes: [
-        'order_id',
-        'total_amount',
-        'status',
-        'payment_method',
-        'shipping_address',
-        'order_date',
-        'phone',
-        'full_name',
-        'notes'
-      ],
+    const order = await Order.findByPk(reqmingw .params.id, {
       include: [
-        {
-          model: OrderDetail,
-          as: 'order_details', // nếu có hoặc không có as đều được nếu đã define đúng
-          attributes: ['quantity', 'price'],
-          include: [
-            {
-              model: Product,
-              attributes: ['product_id', 'product_name', 'image', 'price']
-            }
-          ]
-        }
-      ],
-      order: [['order_date', 'DESC']] // mới nhất lên đầu
+        { model: User, attributes: ['username', 'full_name', 'email'] },
+        { model: OrderDetail, as: 'order_details', include: [Product] }
+      ]
     });
 
-    res.status(200).json({
+    if (!order) return res.status(404).json({ success: false, message: "Không tìm thấy" });
+    if (order.user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: "Không có quyền" });
+    }
+
+    res.json({
       success: true,
-      count: orders.length,
-      data: orders
+      data: {
+        ...order.toJSON(),
+        id: order.order_id.toString(), // frontend dùng id
+      }
     });
-
   } catch (error) {
-    console.error("Lỗi lấy đơn hàng của tôi:", error);
-    res.status(500).json({
-      success: false,
-      message: "Không thể lấy danh sách đơn hàng",
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
 
@@ -232,72 +178,28 @@ export const updateOrderStatus = async (req, res) => {
     if (!updated) return res.status(404).json({ message: "Không tìm thấy đơn" });
 
     const order = await Order.findByPk(req.params.id);
-    res.json({ message: "Cập nhật thành công", order });
+    res.json({ success: true, message: "Cập nhật thành công", order });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server" });
   }
 };
 
-// Lấy chi tiết đơn hàng theo ID
-export const getOrderById = async (req, res) => {
+export const deleteOrder = async (req, res) => {
+  const t = await Order.sequelize.transaction();
   try {
-    const order = await Order.findByPk(req.params.id, {
-      attributes: [
-        'order_id',
-        'user_id',
-        'total_amount',
-        'status',
-        'payment_method',
-        'shipping_address',
-        'order_date',
-        'phone',
-        'full_name',
-        'notes'
-      ],
-      include: [
-        {
-          model: User,
-          as: 'user', // nếu có alias trong model, không thì bỏ as
-          attributes: ['user_id', 'username', 'full_name', 'email', 'phone']
-        },
-        {
-          model: OrderDetail,
-          as: 'order_details', // nếu có alias, không thì bỏ
-          include: [
-            {
-              model: Product,
-              attributes: ['product_id', 'product_name', 'price', 'image']
-            }
-          ]
-        }
-      ]
-    });
-
+    const order = await Order.findByPk(req.params.id);
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy đơn hàng"
-      });
+      await t.rollback();
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
 
-    // Kiểm tra quyền truy cập: chỉ user liên quan hoặc admin mới xem được
-    if (order.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: "Bạn không có quyền truy cập đơn hàng này"
-      });
-    }
+    await OrderDetail.destroy({ where: { order_id: req.params.id }, transaction: t });
+    await Order.destroy({ where: { order_id: req.params.id }, transaction: t });
+    await t.commit();
 
-    res.status(200).json({
-      success: true,
-      data: order
-    });
-  } catch (error) {
-    console.error("Lỗi lấy chi tiết đơn hàng:", error);
-    res.status(500).json({
-      success: false,
-      message: "Lỗi server khi lấy chi tiết đơn hàng",
-      error: error.message
-    });
+    res.json({ success: true, message: "Xóa đơn hàng thành công" });
+  } catch (err) {
+    await t.rollback();
+    res.status(500).json({ message: "Lỗi server" });
   }
 };

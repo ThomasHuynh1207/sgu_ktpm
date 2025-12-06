@@ -43,6 +43,7 @@ export function Login({ onNavigate, setUser }: LoginProps) {
 
       // ĐĂNG NHẬP THÀNH CÔNG → LƯU TOKEN + USER
       localStorage.setItem('token', data.token);        // ← LƯU TOKEN
+      console.log('Response từ backend:', data);
       localStorage.setItem('user', JSON.stringify({
       user_id: data.user.user_id || data.user.id,
       username: data.user.username,

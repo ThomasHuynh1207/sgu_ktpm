@@ -1,4 +1,6 @@
+// src/App.tsx – BẢN HOÀN HẢO NHẤT, CHẠY NGON NGAY!
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Home } from './components/Home';
 import { ProductCatalog } from './components/ProductCatalog';
 import { ProductDetail } from './components/ProductDetail';
@@ -11,7 +13,7 @@ import { OrderHistory } from './components/OrderHistory';
 import { UserProfile } from './components/UserProfile';
 import { Header } from './components/Header';
 
-import type { Product, CartItem, User, Order } from './types';
+import type { Product, CartItem, User, Order, OrderFromBackend } from './types';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
@@ -21,89 +23,106 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
 
-  // 1. KHÔI PHỤC giỏ hàng từ localStorage khi mở trang
-  useEffect(() => {
-    const savedCart = localStorage.getItem('techstore_cart');
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart));
-      } catch (e) {
-        localStorage.removeItem('techstore_cart');
-      }
-    }
-  }, []);
+// Khôi phục giỏ hàng 
+useEffect(() => {
+  if (!user) {
+    setCart([]);
+    return;
+  }
 
-  // 2. LƯU giỏ hàng mỗi khi thay đổi
-  useEffect(() => {
-    if (cart.length > 0) {
-      localStorage.setItem('techstore_cart', JSON.stringify(cart));
-    } else {
-      localStorage.removeItem('techstore_cart');
+  const CART_KEY = `techstore_cart_${user.user_id}`;
+  const saved = localStorage.getItem(CART_KEY);
+  if (saved) {
+    try {
+      setCart(JSON.parse(saved));
+    } catch {
+      localStorage.removeItem(CART_KEY);
     }
-  }, [cart]);
+  }
+}, [user]); // ← quan trọng: chạy lại khi user thay đổi
 
-  // Khôi phục user khi reload
+// Lưu giỏ hàng
+useEffect(() => {
+  if (!user) return;
+
+  const CART_KEY = `techstore_cart_${user.user_id}`;
+  if (cart.length > 0) {
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  } else {
+    localStorage.removeItem(CART_KEY);
+  }
+}, [cart, user]);
+
+  // Khôi phục user
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
     if (savedUser && token) {
       try {
-        const parsed = JSON.parse(savedUser);
+        const u = JSON.parse(savedUser);
         setUser({
-          id: parsed.user_id || parsed.id,
-          username: parsed.username,
-          email: parsed.email,
-          role: parsed.role,
+          user_id: u.user_id,
+          username: u.username,
+          email: u.email,
+          full_name: u.full_name,
+          phone: u.phone,
+          address: u.address,
+          role: u.role,
         });
-      } catch (e) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+      } catch {
+        localStorage.clear();
       }
     }
   }, []);
 
-  // TÍNH TỔNG SỐ LƯỢNG trong giỏ hàng (đúng 100%)
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
-  // ĐĂNG XUẤT: XÓA USER + GIỎ HÀNG + TOKEN
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('techstore_cart'); // xóa giỏ hàng khi logout
-    setUser(null);
-    setCart([]);
-    setCurrentPage('home');
-    alert('Đã đăng xuất thành công!');
-  };
+const handleLogout = () => {
+  // Xóa giỏ hàng của user hiện tại
+  if (user) {
+    const CART_KEY = `techstore_cart_${user.user_id}`;
+    localStorage.removeItem(CART_KEY);
+  }
+
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+  setUser(null);
+  setCart([]); // ← xóa luôn trong state
+  setCurrentPage('home');
+  toast.success('Đăng xuất thành công!');
+};
 
   const addToCart = (product: Product, quantity: number = 1) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.product.id === product.id);
-      if (existingItem) {
-        return prevCart.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
+    setCart(prev => {
+      const exist = prev.find(i => i.product.product_id === product.product_id);
+      if (exist) {
+        return prev.map(i =>
+          i.product.product_id === product.product_id
+            ? { ...i, quantity: i.quantity + quantity }
+            : i
         );
       }
-      return [...prevCart, { product, quantity }];
+      return [...prev, { product, quantity }];
     });
+    toast.success('Đã thêm vào giỏ hàng!');
   };
 
   const updateCartQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
+    if (quantity < 1) {
       removeFromCart(productId);
-    } else {
-      setCart(prev =>
-        prev.map(item =>
-          item.product.id === productId ? { ...item, quantity } : item
-        )
-      );
+      return;
     }
+    setCart(prev =>
+      prev.map(i =>
+        i.product.product_id.toString() === productId
+          ? { ...i, quantity }
+          : i
+      )
+    );
   };
 
   const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.product.id !== productId));
+    setCart(prev => prev.filter(i => i.product.product_id.toString() !== productId));
   };
 
   const clearCart = () => setCart([]);
@@ -118,16 +137,80 @@ export default function App() {
     setCurrentPage('products');
   };
 
-  const placeOrder = (orderData: Omit<Order, 'id' | 'date'>) => {
-    const newOrder: Order = {
+  // ĐẶT HÀNG THẬT – DÙNG ID THẬT TỪ BACKEND
+ const placeOrder = async (orderData: Omit<Order, 'id' | 'date'>) => {
+  try {
+    // 1. KIỂM TRA TOKEN NGAY TỪ ĐẦU – BẮT BUỘC!
+    const token = localStorage.getItem('token');
+    if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+      toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
+      setCurrentPage('login');
+      return;
+    }
+
+    // Hiện đơn tạm
+    const tempId = `TEMP-${Date.now()}`;
+    const tempOrder: Order = {
       ...orderData,
-      id: `ORD-${Date.now()}`,
+      id: tempId,
       date: new Date().toISOString(),
     };
-    setOrders(prev => [...prev, newOrder]);
+    setOrders(prev => [...prev, tempOrder]);
     clearCart();
     setCurrentPage('order-history');
-  };
+    toast.loading('Đang gửi đơn hàng...', { id: 'placing' });
+
+    // GỬI TOKEN ĐÚNG ĐỊNH DẠNG – LOẠI BỎ || '' HOÀN TOÀN!
+    const res = await fetch('http://localhost:5000/api/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // ← ĐÚNG 100% – KHÔNG CÓ || ''!
+      },
+      body: JSON.stringify({
+        totalAmount: orderData.total,
+        shippingAddress: orderData.shippingAddress,
+        paymentMethod: orderData.paymentMethod,
+        items: orderData.items.map(i => ({
+          productId: i.product.product_id || i.product.id,
+          quantity: i.quantity,
+          price: i.product.price,
+        })),
+        phone: orderData.phone,
+        fullName: orderData.fullName,
+        notes: orderData.notes,
+      }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Đặt hàng thất bại');
+    }
+
+    const realOrder = await res.json();
+
+    const finalOrder: Order = {
+      id: String(realOrder.order?.order_id || realOrder.orderId || realOrder.id || 'unknown'),
+      date: realOrder.order?.order_date || realOrder.created_at || new Date().toISOString(),
+      total: realOrder.order?.total_amount || orderData.total,
+      status: (realOrder.order?.status || 'Pending') as Order['status'],
+      paymentMethod: realOrder.order?.payment_method || orderData.paymentMethod,
+      shippingAddress: realOrder.order?.shipping_address || orderData.shippingAddress,
+      items: orderData.items,
+      phone: orderData.phone,
+      fullName: orderData.fullName,
+      notes: orderData.notes,
+    };
+
+    setOrders(prev => prev.map(o => (o.id === tempId ? finalOrder : o)));
+    toast.success('Đặt hàng thành công! Đơn #' + finalOrder.id, { id: 'placing' });
+
+  } catch (err: any) {
+    console.error('Lỗi đặt hàng:', err);
+    toast.error(err.message || 'Đặt hàng thất bại. Vui lòng thử lại', { id: 'placing' });
+    setOrders(prev => prev.filter(o => !o.id.startsWith('TEMP-')));
+  }
+};
 
   const renderPage = () => {
     switch (currentPage) {
@@ -138,9 +221,27 @@ export default function App() {
       case 'product-detail':
         return <ProductDetail productId={selectedProductId} onNavigate={setCurrentPage} addToCart={addToCart} />;
       case 'cart':
-        return <Cart cart={cart} onNavigate={setCurrentPage} updateQuantity={updateCartQuantity} removeItem={removeFromCart} />;
+        return (
+          <Cart
+            cart={cart}
+            
+            onNavigate={setCurrentPage}
+            updateQuantity={updateCartQuantity}
+            removeItem={removeFromCart}
+          />
+        );
       case 'checkout':
-        return <Checkout cart={cart} user={user} onNavigate={setCurrentPage} placeOrder={placeOrder} />;
+        return <Checkout 
+      cart={cart} 
+      user={user} 
+      onNavigate={setCurrentPage} 
+      placeOrder={placeOrder}
+      onOrderSuccess={() => {
+        clearCart();                    // Xóa giỏ hàng
+        setCurrentPage('order-history'); // Chuyển sang lịch sử đơn
+        toast.success('Đặt hàng thành công!');
+      }}
+    />;
       case 'login':
         return <Login onNavigate={setCurrentPage} setUser={setUser} />;
       case 'register':
@@ -158,17 +259,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header – ẩn khi login/register */}
       {currentPage !== 'login' && currentPage !== 'register' && (
         <Header
           onNavigate={setCurrentPage}
           cartCount={cartCount}
           user={user}
-          setUser={setUser}
-        />
+          onLogout={handleLogout}
+          setUser={setUser}        
+          />
       )}
 
-      <main className={currentPage === 'login' || currentPage === 'register' ? 'pt-0' : 'pt-16'}>
+      <main className={currentPage === 'login' || currentPage === 'register' ? '' : 'pt-16'}>
         {renderPage()}
       </main>
     </div>

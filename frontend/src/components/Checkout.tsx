@@ -7,13 +7,14 @@ import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Textarea } from './ui/textarea';
 import { Loader2, ChevronLeft, Truck, CreditCard, Wallet, Home, CheckCircle } from 'lucide-react';
-import type { CartItem, User } from '../types';
+import type { CartItem, Order, User } from '../types';
 
 type CheckoutProps = {
   cart: CartItem[];
   user: User | null;
   onNavigate: (page: string) => void;
   onOrderSuccess: () => void; // gọi khi đặt hàng thành công để clear cart + chuyển trang
+  placeOrder: (orderData: Omit<Order, 'id' | 'date'>) => Promise<void>;
 };
 
 export function Checkout({ cart, user, onNavigate, onOrderSuccess }: CheckoutProps) {

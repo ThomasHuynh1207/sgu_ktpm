@@ -11,6 +11,7 @@ type HeaderProps = {
   onNavigate: (page: string) => void;
   cartCount: number;
   setUser: (user: User | null) => void;
+  onLogout: () => void;
 };
 
 export function Header({ user, onNavigate, cartCount, setUser }: HeaderProps) {

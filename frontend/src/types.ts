@@ -1,19 +1,19 @@
-// src/types.ts (hoặc src/types/index.ts)
-
+// src/types.ts
 export interface Product {
-  product_id: number;           // DB dùng product_id (SERIAL)
+  product_id: number;
   product_name: string;
-  description?: string;
   price: number;
   stock: number;
   image?: string;
+  description?: string;
   category_id: number;
-  // Nếu frontend cần hiển thị tên category luôn thì thêm:
+  category_name?: string;
 
-  id: string;                    // = product_id.toString()
-  name: string;                  // = product_name
-  category: string;              // = category_name
-  specs: string[];               // mảng thông số kỹ thuật
+  // Frontend dùng
+  id: string;
+  name: string;
+  category: string;
+  specs: string[];
 }
 
 export interface CartItem {
@@ -22,46 +22,52 @@ export interface CartItem {
 }
 
 export interface User {
-  user_id: number;              // DB trả về user_id (SERIAL), không phải string
+  user_id: number;
   username: string;
   email: string;
-  full_name?: string;           // có thể null
-  phone?: string;               // string mới đúng (0901234567), không phải number
+  full_name?: string;
+  phone?: string;
   address?: string;
   role: 'admin' | 'customer';
-  // Nếu backend có trả thêm token thì thêm:
-  // token?: string;
 }
 
+// Order cho frontend hiển thị
 export interface Order {
+  id: string;
+  date: string;
+  total: number;
+  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+  paymentMethod: string;
+  shippingAddress: string;
+  items: Array<{
+    product: Product;
+    quantity: number;
+  }>;
+  phone?: string;
+  fullName?: string;
+  notes?: string;
+}
+
+// Order từ backend (giữ nguyên tên DB)
+export interface OrderFromBackend {
   order_id: number;
   user_id: number;
   total_amount: number;
-  shipping_address: string;
-  payment_method: 'COD' | 'TRANSFER';
   status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-  order_date: string;           // hoặc Date nếu mày parse
-  notes?: string;
-  phone?: string;
+  payment_method: string;
+  shipping_address: string;
+  order_date: string;
   full_name?: string;
-
-  // Chi tiết đơn hàng (khi lấy danh sách)
-  order_details?: Array<{
-    product_id: number;
-    product_name: string;
-    price: number;
+  phone?: string;
+  notes?: string;
+  order_details: Array<{
     quantity: number;
-    image?: string;
+    price: number;
+    product: {
+      product_id: number;
+      product_name: string;
+      image?: string;
+      price: number;
+    };
   }>;
-}
-
-// Dành cho giỏ hàng local (nếu dùng context hoặc zustand)
-export interface CartState {
-  items: CartItem[];
-  addToCart: (product: Product, quantity?: number) => void;
-  removeFromCart: (productId: number) => void;
-  updateQuantity: (productId: number, quantity: number) => void;
-  clearCart: () => void;
-  getTotalItems: () => number;
-  getTotalPrice: () => number;
 }

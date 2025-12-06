@@ -54,47 +54,62 @@ export const deleteUser = async (req, res) => {
   }
 };
 
+// controllers/userController.js
 export const loginUser = async (req, res) => {
- try {
- const { username, password } = req.body; 
+  try {
+    const { username, password } = req.body;
 
-    // 🌟🌟🌟 ĐÃ CẬP NHẬT: Thay thế User.sequelize.Op.or bằng Op.or sau khi import 🌟🌟🌟
- const user = await User.findOne({ 
-        where: { 
-            [Op.or]: [
-                { username: username } // Thử tìm theo Username
-            ]
-        } 
-    }); 
- 
- if (!user) {
- // Nếu không tìm thấy user, trả về lỗi 404 (Lỗi này hiện đã được khắc phục)
- return res.status(404).json({ message: "User not found" });
- }
+    if (!username || !password) {
+      return res.status(400).json({ message: "Vui lòng nhập tên đăng nhập và mật khẩu" });
+    }
 
- // 2. So sánh mật khẩu đã băm (hashed password)
- const isPasswordMatch = await bcrypt.compare(password, user.password);
+    // TÌM USER TRONG DB
+    const user = await User.findOne({ where: { username } });
 
- if (!isPasswordMatch) {
- // Nếu mật khẩu không khớp, trả về lỗi 401
- return res.status(401).json({ message: "Invalid credentials" });
- }
+    if (!user) {
+      return res.status(401).json({ message: "Sai tên đăng nhập hoặc mật khẩu" });
+    }
 
- // 3. Nếu mọi thứ đúng, đăng nhập thành công
- res.status(200).json({ 
-      message: "Login successful", 
+    // LẤY DỮ LIỆU THẬT (Sequelize hay trả về object có dataValues)
+    const userData = user.dataValues || user.get({ plain: true });
+
+    // KIỂM TRA MẬT KHẨU
+    const isMatch = await bcrypt.compare(password, userData.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Sai tên đăng nhập hoặc mật khẩu" });
+    }
+
+    // TẠO TOKEN
+    const token = jwt.sign(
+      { 
+        user_id: userData.user_id, 
+        username: userData.username, 
+        role: userData.role 
+      },
+      process.env.JWT_SECRET || 'techstore2025secret',
+      { expiresIn: '7d' }
+    );
+
+    // TRẢ VỀ TOKEN + USER – BẮT BUỘC PHẢI CÓ TOKEN!!!
+    return res.status(200).json({
+      message: "Login successful",
+      token: token,
       user: {
-          user_id: user.user_id,
-          username: user.username,
-          email: user.email,
-          full_name: user.full_name,
-          role: user.role
-} 
-});
+        user_id: userData.user_id,
+        username: userData.username,
+        email: userData.email || '',
+        role: userData.role || 'customer',
+        full_name: userData.full_name || userData.username,
+        phone: userData.phone || '',
+        address: userData.address || ''
+      }
+    });
 
   } catch (error) {
-    // RẤT QUAN TRỌNG: Console log lỗi ra terminal server để debug
-    console.error("LOGIN ERROR:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
- }
+    console.error("LỖI ĐĂNG NHẬP CHI TIẾT:", error);
+    return res.status(500).json({ 
+      message: "Lỗi server khi đăng nhập",
+      error: error.message 
+    });
+  }
 };

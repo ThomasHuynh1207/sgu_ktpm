@@ -101,8 +101,8 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
       day: 'numeric',
     });
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
-  const pendingOrders = orders.filter((order) => orders.o === 'pending').length;
+  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+  const pendingOrders = orders.filter((order) => order.status === 'Pending').length;
 
   const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
     setOrders(
@@ -564,18 +564,18 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
             <h2 className="text-2xl text-gray-900">Danh sách đơn hàng</h2>
             <div className="grid gap-4">
               {orders.map((order) => (
-                <Card key={order.order_id}>
+                <Card key={order.id}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="text-lg text-gray-900 mb-1">Đơn hàng #{order.order_id}</h3>
-                        <p className="text-sm text-gray-600">{formatDate(order.order_date)}</p>
+                        <h3 className="text-lg text-gray-900 mb-1">Đơn hàng #{order.id}</h3>
+                        <p className="text-sm text-gray-600">{formatDate(order.date)}</p>
                       </div>
                       <Badge>
-                        {status === 'pending' && 'Chưa xử lý'}
-                        {order.status === 'processing' && 'Đang xử lý'}
-                        {order.status === 'shipped' && 'Đã gửi'}
-                        {order.status === 'delivered' && 'Hoàn thành'}
+                        {order.status === 'Pending' && 'Chưa xử lý'}
+                        {order.status === 'Processing' && 'Đang xử lý'}
+                        {order.status === 'Shipped' && 'Đã gửi'}
+                        {order.status === 'Delivered' && 'Hoàn thành'}
                       </Badge>
                     </div>
                     <div className="mb-4">
@@ -589,21 +589,21 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
                     <div className="flex justify-between items-center pt-4 border-t">
                       <div>
                         <p className="text-sm text-gray-600">Tổng cộng</p>
-                        <p className="text-xl text-blue-600">{formatPrice(order.total_amount)}</p>
+                        <p className="text-xl text-blue-600">{formatPrice(order.total)}</p>
                       </div>
                       <div className="flex gap-2">
-                        {order.status === 'pending' && (
-                          <Button size="sm" onClick={() => updateOrderStatus(order.order_id, 'processing')}>
+                        {order.status === 'Pending' && (
+                          <Button size="sm" onClick={() => updateOrderStatus(order.id, 'Processing')}>
                             Xử lý
                           </Button>
                         )}
-                        {order.status === 'processing' && (
-                          <Button size="sm" onClick={() => updateOrderStatus(order.id, 'shipped')}>
+                        {order.status === 'Processing' && (
+                          <Button size="sm" onClick={() => updateOrderStatus(order.id, 'Shipped')}>
                             Gửi hàng
                           </Button>
                         )}
-                        {order.status === 'shipped' && (
-                          <Button size="sm" onClick={() => updateOrderStatus(order.id, 'delivered')}>
+                        {order.status === 'Shipped' && (
+                          <Button size="sm" onClick={() => updateOrderStatus(order.id, 'Delivered')}>
                             Hoàn thành
                           </Button>
                         )}
