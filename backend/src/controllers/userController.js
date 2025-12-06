@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import { Op } from 'sequelize';
+import jwt from 'jsonwebtoken';
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -54,62 +55,53 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// controllers/userController.js
+
 export const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ message: "Vui lòng nhập tên đăng nhập và mật khẩu" });
+      return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin" });
     }
 
-    // TÌM USER TRONG DB
-    const user = await User.findOne({ where: { username } });
+    // ÉP TRẢ VỀ PASSWORD – đây là dòng quan trọng nhất!
+    const user = await User.findOne({ 
+      where: { username },
+      attributes: { include: ['password'] }  // ← thêm dòng này là hết 500 ngay
+    });
 
     if (!user) {
       return res.status(401).json({ message: "Sai tên đăng nhập hoặc mật khẩu" });
     }
 
-    // LẤY DỮ LIỆU THẬT (Sequelize hay trả về object có dataValues)
-    const userData = user.dataValues || user.get({ plain: true });
-
-    // KIỂM TRA MẬT KHẨU
-    const isMatch = await bcrypt.compare(password, userData.password);
+    // Giờ user.password chắc chắn có dữ liệu
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Sai tên đăng nhập hoặc mật khẩu" });
     }
 
-    // TẠO TOKEN
     const token = jwt.sign(
-      { 
-        user_id: userData.user_id, 
-        username: userData.username, 
-        role: userData.role 
-      },
+      { user_id: user.user_id, username: user.username, role: user.role },
       process.env.JWT_SECRET || 'techstore2025secret',
       { expiresIn: '7d' }
     );
 
-    // TRẢ VỀ TOKEN + USER – BẮT BUỘC PHẢI CÓ TOKEN!!!
-    return res.status(200).json({
+    return res.json({
       message: "Login successful",
-      token: token,
+      token,
       user: {
-        user_id: userData.user_id,
-        username: userData.username,
-        email: userData.email || '',
-        role: userData.role || 'customer',
-        full_name: userData.full_name || userData.username,
-        phone: userData.phone || '',
-        address: userData.address || ''
+        user_id: user.user_id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        full_name: user.full_name,
+        phone: user.phone,
+        address: user.address
       }
     });
 
   } catch (error) {
-    console.error("LỖI ĐĂNG NHẬP CHI TIẾT:", error);
-    return res.status(500).json({ 
-      message: "Lỗi server khi đăng nhập",
-      error: error.message 
-    });
+    console.error("Lỗi đăng nhập:", error);
+    return res.status(500).json({ message: "Lỗi server" });
   }
 };
