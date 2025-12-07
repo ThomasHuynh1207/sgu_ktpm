@@ -49,16 +49,27 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
       setLoading(true);
 
       const token = localStorage.getItem('token');
+      console.log("TOKEN FROM LOCAL STORAGE =", token);
+
+
 
       const [prodRes, catRes, orderRes] = await Promise.all([
-        fetch('http://localhost:5000/api/products'),
-        fetch('http://localhost:5000/api/categories'),
-        fetch('http://localhost:5000/api/orders', {
+        fetch("http://localhost:5000/api/products", {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+
+        fetch("http://localhost:5000/api/categories", {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+
+        fetch("http://localhost:5000/api/orders", {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         }),
       ]);
+      
 
       // KIỂM TRA TẤT CẢ – HOÀN HẢO!
       if (!prodRes.ok || !catRes.ok || !orderRes.ok) {
@@ -104,7 +115,7 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
         phone: o.phone,
         fullName: o.full_name,
         notes: o.notes,
-        items: (o.order_details || []).map((d: any) => ({
+        items: (o.items  || []).map((d: any) => ({
           product: {
             product_id: d.product.product_id,
             product_name: d.product.product_name,

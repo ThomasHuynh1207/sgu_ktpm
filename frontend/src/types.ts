@@ -34,6 +34,7 @@ export interface User {
 // Order cho frontend hiển thị – ĐÃ THÊM userId
 export interface Order {
   id: string;
+  userId: number;
   date: string;
   total: number;
   status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
@@ -46,7 +47,7 @@ export interface Order {
   phone?: string;
   fullName?: string;
   notes?: string;
-  userId: number;  // ← DÒNG VÀNG ĐÃ ĐƯỢC THÊM!
+  
 }
 
 // Order từ backend (giữ nguyên tên DB)
@@ -72,3 +73,4 @@ export interface OrderFromBackend {
     };
   }>;
 }
+

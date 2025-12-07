@@ -8,13 +8,12 @@ const OrderDetail = sequelize.define("OrderDetail", {
   order_id: { type: DataTypes.INTEGER, references: { model: "orders", key: "order_id" } },
   product_id: { type: DataTypes.INTEGER, references: { model: "products", key: "product_id" } },
   quantity: { type: DataTypes.INTEGER },
-  price: { type: DataTypes.DECIMAL(10, 2) },
+  price: { type: DataTypes.DECIMAL(12, 2) },
 }, {
   tableName: "order_details",
   timestamps: false,
 });
 
-OrderDetail.belongsTo(Order, { foreignKey: "order_id" });
-OrderDetail.belongsTo(Product, { foreignKey: "product_id" });
+
 
 export default OrderDetail;

@@ -92,37 +92,58 @@ const handleLogout = () => {
   toast.success('Đăng xuất thành công!');
 };
 
-  const addToCart = (product: Product, quantity: number = 1) => {
-    setCart(prev => {
-      const exist = prev.find(i => i.product.product_id === product.product_id);
-      if (exist) {
-        return prev.map(i =>
-          i.product.product_id === product.product_id
-            ? { ...i, quantity: i.quantity + quantity }
-            : i
-        );
+  const addToCart = (product: Product) => {
+  const productId = product.product_id.toString(); // luôn có id string
+
+  setCart(prev => {
+    const existing = prev.find(item => item.product.id === productId);
+
+    if (existing) {
+      return prev.map(item =>
+        item.product.id === productId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      );
+    }
+
+    return [
+      ...prev,
+      {
+        product: {
+          ...product,
+          id: productId, // BẮT BUỘC: thêm id dạng string
+        },
+        quantity: 1,
       }
-      return [...prev, { product, quantity }];
-    });
-    toast.success('Đã thêm vào giỏ hàng!');
-  };
+    ];
+  });
+};
+
 
   const updateCartQuantity = (productId: string, quantity: number) => {
-    if (quantity < 1) {
-      removeFromCart(productId);
-      return;
-    }
-    setCart(prev =>
-      prev.map(i =>
-        i.product.product_id.toString() === productId
-          ? { ...i, quantity }
-          : i
-      )
-    );
-  };
+  if (quantity < 1) {
+    removeFromCart(productId);
+    return;
+  }
+
+  setCart(prev =>
+    prev.map(i => {
+      if (!i.product || !i.product.product_id) return i;
+      return i.product.product_id.toString() === productId 
+        ? { ...i, quantity }
+        : i;
+    })
+  );
+};
+
 
   const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(i => i.product.product_id.toString() !== productId));
+    setCart(prev =>
+    prev.filter(i => {
+      if (!i.product || !i.product.product_id) return false;
+      return i.product.product_id.toString() !== productId;
+    })
+  );
   };
 
   const clearCart = () => setCart([]);
@@ -154,6 +175,7 @@ const handleLogout = () => {
       ...orderData,
       id: tempId,
       date: new Date().toISOString(),
+      userId: user!.user_id,
     };
     setOrders(prev => [...prev, tempOrder]);
     clearCart();
@@ -191,6 +213,7 @@ const handleLogout = () => {
 
     const finalOrder: Order = {
       id: String(realOrder.order?.order_id || realOrder.orderId || realOrder.id || 'unknown'),
+      userId: user!.user_id,
       date: realOrder.order?.order_date || realOrder.created_at || new Date().toISOString(),
       total: realOrder.order?.total_amount || orderData.total,
       status: (realOrder.order?.status || 'Pending') as Order['status'],

@@ -4,6 +4,7 @@ import routes from "./routes/index.js";
 import sequelize from "./config/db.js";
 import { errorHandler } from "./middleware/errorMiddleware.js";
 import cors from "cors";
+import "./models/associations.js";
 
 
 dotenv.config();
@@ -21,7 +22,7 @@ app.use("/api", routes);
 app.use(errorHandler);
 
 // Start
-sequelize.sync().then(() => {
+sequelize.sync({ alter: true }).then(() => {
   console.log("✅ DB connected");
   app.listen(process.env.PORT || 5000, () =>
     console.log(`🚀 Server running on port ${process.env.PORT || 5000}`)

@@ -121,8 +121,8 @@ export const getMyOrders = async (req, res) => {
 
 export const getAllOrders = async (req, res) => {
   try {
-    // SỬA DÒNG NÀY – QUAN TRỌNG NHẤT!
-    if (!req.user || !req.user.role || req.user.role !== 'admin') {
+    // Kiểm tra admin (đã có middleware rồi nhưng cứ để thêm cho chắc)
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false, 
         message: "Chỉ admin mới có quyền xem tất cả đơn hàng" 
@@ -130,28 +130,65 @@ export const getAllOrders = async (req, res) => {
     }
 
     const orders = await Order.findAll({
+      attributes: [
+        'order_id', 'user_id', 'total_amount', 'status', 'payment_method',
+        'shipping_address', 'order_date', 'phone', 'full_name', 'notes'
+      ],
       include: [
-        { model: User, attributes: ['user_id', 'username', 'email', 'full_name'] },
-        { 
-          model: OrderDetail, 
-          as: 'order_details', 
-          include: [{ model: Product }] 
+        {
+          model: User,
+          attributes: ['user_id', 'username', 'email', 'full_name']
+        },
+        {
+          model: OrderDetail,
+          as: 'order_details',
+          attributes: ['product_id', 'quantity', 'price'],
+          include: [
+            {
+              model: Product,
+              attributes: ['product_id', 'product_name', 'image', 'price']
+            }
+          ]
         }
       ],
       order: [['order_date', 'DESC']]
     });
 
+    // Format lại cho frontend dễ dùng
+    const formattedOrders = orders.map(order => {
+      const plain = order.toJSON();
+      return {
+        ...plain,
+        id: plain.order_id.toString(),
+        order_id: plain.order_id,
+        items: plain.order_details?.map(detail => ({
+          product: {
+            product_id: detail.Product.product_id,
+            product_name: detail.Product.product_name,
+            price: detail.Product.price,
+            image: detail.Product.image || 'https://via.placeholder.com/300',
+            id: detail.Product.product_id.toString(),
+            name: detail.Product.product_name,
+          },
+          quantity: detail.quantity,
+        })) || []
+      };
+    });
+
     res.json({
       success: true,
-      count: orders.length,
-      data: orders.map(o => ({
-        ...o.toJSON(),
-        id: o.order_id.toString(),
-      }))
+      count: formattedOrders.length,
+      data: formattedOrders
     });
+
   } catch (error) {
-    console.error("Lỗi lấy tất cả đơn hàng:", error);
-    res.status(500).json({ success: false, message: "Lỗi server" });
+    console.error("LỖI LẤY TẤT CẢ ĐƠN HÀNG (ADMIN):", error.message);
+    console.error(error.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: "Lỗi server khi tải đơn hàng admin",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

@@ -100,3 +100,17 @@ INSERT INTO products (category_id, product_name, description, price, stock, imag
 (6, 'Tai nghe SteelSeries Arctis Nova 7 Wireless', '2.4GHz + Bluetooth, 38h pin', 4990000, 28, 'https://www.steelseries.com/content/dam/steelseries/websites/steelseries-com/us/gaming-headsets/arctis-nova-7/arctis-nova-7-black.png'),
 (6, 'Tai nghe HyperX Cloud II Wireless', '7.1 surround, 30h pin', 3290000, 50, 'https://hyperx.com/wp-content/uploads/2020/10/cloud2wireless-1.png');
 
+-- 3. Thêm cột payment_method vào bảng orders
+SELECT column_name 
+FROM information_schema.columns 
+WHERE table_name = 'orders';
+
+ALTER TABLE orders
+ADD COLUMN payment_method VARCHAR(50);
+
+ALTER TABLE orders ADD COLUMN phone VARCHAR(20);
+ALTER TABLE orders ADD COLUMN full_name VARCHAR(100);
+ALTER TABLE orders ADD COLUMN notes TEXT;
+
+ALTER TABLE orders 
+ALTER COLUMN total_amount TYPE DECIMAL(14,2);

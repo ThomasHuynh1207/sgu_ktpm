@@ -1,7 +1,6 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
-import { Op } from 'sequelize';
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -56,56 +55,46 @@ export const deleteUser = async (req, res) => {
 };
 
 
+
 export const loginUser = async (req, res) => {
+  const { username, password } = req.body;
+
   try {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin" });
-    }
-
-    // ÉP TRẢ VỀ PASSWORD – đây là dòng quan trọng nhất!
-    const user = await User.findOne({ 
-      where: { username },
-      attributes: { include: ['password'] }  // ← thêm dòng này là hết 500 ngay
-    });
-
+    const user = await User.findOne({ where: { username } });
     if (!user) {
-      return res.status(401).json({ message: "Sai tên đăng nhập hoặc mật khẩu" });
+      return res.status(400).json({ message: "User not found" });
     }
 
-    // Giờ user.password chắc chắn có dữ liệu
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Sai tên đăng nhập hoặc mật khẩu" });
+      return res.status(400).json({ message: "Invalid password" });
     }
 
+    // ————————————————
+    //  TẠO TOKEN JWT
+    // ————————————————
     const token = jwt.sign(
-      { 
-        id: user.user_id,           // ← CHỈ DÙNG "id" MÀ THÔI!
-        username: user.username, 
-        role: user.role 
-      },
-      process.env.JWT_SECRET || 'techstore2025secret',
-      { expiresIn: '7d' }
+      { user_id: user.user_id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
     );
 
-    return res.json({
+    console.log("TOKEN BACKEND ĐÃ TẠO =", token);
+    // ————————————————
+    //  TRẢ TOKEN + USER CHO FRONTEND
+    // ————————————————
+    res.json({
       message: "Login successful",
-      token,
+      token: token,
       user: {
         user_id: user.user_id,
         username: user.username,
         email: user.email,
         role: user.role,
-        full_name: user.full_name,
-        phone: user.phone,
-        address: user.address
-      }
+      },
     });
-
-  } catch (error) {
-    console.error("Lỗi đăng nhập:", error);
-    return res.status(500).json({ message: "Lỗi server" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Login error" });
   }
 };

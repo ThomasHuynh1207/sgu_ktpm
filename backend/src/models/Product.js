@@ -1,6 +1,7 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 import Category from "./Category.js";
+import OrderDetail from "./OrderDetail.js";
 
 const Product = sequelize.define("Product", {
   product_id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -13,7 +14,7 @@ const Product = sequelize.define("Product", {
   },
   product_name: { type: DataTypes.STRING(100), allowNull: false },
   description: { type: DataTypes.TEXT },
-  price: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+  price: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
   stock: { type: DataTypes.INTEGER, defaultValue: 0 },
   image: { type: DataTypes.STRING(255) },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
@@ -23,5 +24,6 @@ const Product = sequelize.define("Product", {
 });
 
 Product.belongsTo(Category, { foreignKey: "category_id" });
+
 
 export default Product;

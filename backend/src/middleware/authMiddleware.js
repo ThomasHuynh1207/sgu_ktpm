@@ -13,10 +13,10 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "techstore2025secret");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET );
 
     // ĐÃ SỬA: dùng decoded.user_id thay vì decoded.id
-    const user = await User.findByPk(decoded.id, {
+    const user = await User.findByPk(decoded.user_id, {
       attributes: { exclude: ["password"] },
     });
 
