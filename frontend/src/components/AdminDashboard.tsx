@@ -41,34 +41,49 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editCategoryName, setEditCategoryName] = useState('');
 
-  // Tải dữ liệu từ server
   useEffect(() => {
-    const fetchData = async () => {
-      if (user?.role !== 'admin') return;
+  const fetchData = async () => {
+    if (user?.role !== 'admin') return;
 
-      try {
-        setLoading(true);
-        const [prodRes, catRes] = await Promise.all([
-          fetch('http://localhost:5000/api/products'),
-          fetch('http://localhost:5000/api/categories'),
-        ]);
+    try {
+      setLoading(true);
 
-        if (!prodRes.ok || !catRes.ok) throw new Error('Lỗi tải dữ liệu');
+      const token = localStorage.getItem('token');
+
+      const [prodRes, catRes, orderRes] = await Promise.all([
+        fetch('http://localhost:5000/api/products'),
+        fetch('http://localhost:5000/api/categories'),
+        fetch('http://localhost:5000/api/orders', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }),
+      ]);
+
+      // KIỂM TRA TẤT CẢ – HOÀN HẢO!
+      if (!prodRes.ok || !catRes.ok || !orderRes.ok) {
+        if (!orderRes.ok) {
+          const err = await orderRes.json().catch(() => ({}));
+          toast.error(err.message || 'Không có quyền xem đơn hàng');
+        }
+        if (!prodRes.ok) toast.error('Lỗi tải sản phẩm');
+        if (!catRes.ok) toast.error('Lỗi tải danh mục');
+        throw new Error('Lỗi tải dữ liệu admin');
+      }
 
       const rawProducts = await prodRes.json();
-      const rawCategories= await catRes.json();
+      const rawCategories = await catRes.json();
+      const rawOrders = await orderRes.json();
 
-      // Tạo map category_id → tên
+      // Xử lý sản phẩm + danh mục
       const categoryMap = Object.fromEntries(
-          rawCategories.map((cat: any) => [Number(cat.category_id), cat.category_name])
-        );
+        rawCategories.map((cat: any) => [Number(cat.category_id), cat.category_name])
+      );
 
-      //Chuẩn hoá sản phẩm
       const normalizedProducts = rawProducts.map((p: any) => ({
         ...p,
         id: p.product_id.toString(),
         name: p.product_name,
-
         category_id: Number(p.category_id),
         category: categoryMap[p.category_id] || 'Chưa phân loại',
       }));
@@ -76,16 +91,45 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
       setProducts(normalizedProducts);
       setCategories(rawCategories);
 
-      } catch (error) {
-        toast.error('Không kết nối được server!');
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      // Xử lý đơn hàng
+      const backendOrders: any[] = rawOrders.data || rawOrders;
+      const normalizedOrders: Order[] = backendOrders.map((o: any) => ({
+        id: o.order_id.toString(),
+        userId: o.user_id,
+        date: o.order_date,
+        total: Number(o.total_amount),
+        status: o.status as Order['status'],
+        paymentMethod: o.payment_method || 'COD',
+        shippingAddress: o.shipping_address || '',
+        phone: o.phone,
+        fullName: o.full_name,
+        notes: o.notes,
+        items: (o.order_details || []).map((d: any) => ({
+          product: {
+            product_id: d.product.product_id,
+            product_name: d.product.product_name,
+            price: d.product.price,
+            image: d.product.image,
+            id: d.product.product_id.toString(),
+            name: d.product.product_name,
+            category: 'Unknown',
+          } as Product,
+          quantity: d.quantity,
+        })),
+      }));
 
-    fetchData();
-  }, [user]);
+      setOrders(normalizedOrders);
+
+    } catch (error: any) {
+      toast.error('Lỗi tải dữ liệu admin');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, [user, setOrders]);
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('vi-VN', {

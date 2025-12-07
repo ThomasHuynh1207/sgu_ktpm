@@ -81,7 +81,11 @@ export const loginUser = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { user_id: user.user_id, username: user.username, role: user.role },
+      { 
+        id: user.user_id,           // ← CHỈ DÙNG "id" MÀ THÔI!
+        username: user.username, 
+        role: user.role 
+      },
       process.env.JWT_SECRET || 'techstore2025secret',
       { expiresIn: '7d' }
     );

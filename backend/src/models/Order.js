@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 import User from "./User.js";
 
+
 const Order = sequelize.define("Order", {
   order_id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   user_id: { type: DataTypes.INTEGER, references: { model: "users", key: "user_id" } },
@@ -16,6 +17,9 @@ const Order = sequelize.define("Order", {
   tableName: "orders",
   timestamps: false,
 });
+
+
+
 
 Order.belongsTo(User, { foreignKey: "user_id" });
 

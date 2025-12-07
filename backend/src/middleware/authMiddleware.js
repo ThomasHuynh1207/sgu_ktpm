@@ -16,7 +16,7 @@ export const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "techstore2025secret");
 
     // ĐÃ SỬA: dùng decoded.user_id thay vì decoded.id
-    const user = await User.findByPk(decoded.user_id, {
+    const user = await User.findByPk(decoded.id, {
       attributes: { exclude: ["password"] },
     });
 
@@ -24,7 +24,7 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: "Không tìm thấy người dùng" });
     }
 
-    req.user = user;
+    req.user = user.dataValues;
     next();
   } catch (error) {
     console.error("Lỗi verify token:", error.message);
@@ -33,9 +33,12 @@ export const protect = async (req, res, next) => {
 };
 
 export const admin = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
+  if (req.user && req.user.role === 'admin') {
     next();
   } else {
-    res.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
+    return res.status(403).json({
+      success: false,
+      message: "Chỉ admin mới có quyền truy cập tài nguyên này"
+    });
   }
 };

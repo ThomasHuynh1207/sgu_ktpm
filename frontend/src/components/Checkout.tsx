@@ -94,17 +94,9 @@ export function Checkout({ cart, user, onNavigate, onOrderSuccess }: CheckoutPro
         throw new Error(data.message || 'Đặt hàng thất bại');
       }
 
-      // Xóa giỏ hàng sau khi đặt thành công
-      await fetch('http://localhost:5000/api/cart/clear', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
+      onNavigate('order-history');
       // Thông báo thành công + chuyển trang
       alert('Đặt hàng thành công! Cảm ơn bạn đã mua sắm tại cửa hàng chúng tôi');
-      onOrderSuccess(); // ví dụ: onNavigate('orders') hoặc clear cart ở parent
 
     } catch (err: any) {
       console.error(err);

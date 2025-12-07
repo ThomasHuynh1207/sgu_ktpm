@@ -10,7 +10,7 @@ export const createOrder = async (req, res) => {
   const t = await Order.sequelize.transaction();
 
   try {
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     const {
       totalAmount,
       shippingAddress,
@@ -35,7 +35,7 @@ export const createOrder = async (req, res) => {
         status: "Pending",
         notes,
         phone,
-        full_name: fullName || req.user.username,
+        full_name: fullName || req.user.full_name || req.user.username,
       },
       { transaction: t }
     );
@@ -95,7 +95,7 @@ export const createOrder = async (req, res) => {
 export const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.findAll({
-      where: { user_id: req.user.id },
+      where: { user_id: req.user.user_id },
       attributes: ['order_id', 'total_amount', 'status', 'payment_method', 'shipping_address', 'order_date', 'phone', 'full_name', 'notes'],
       include: [{
         model: OrderDetail,
@@ -121,10 +121,22 @@ export const getMyOrders = async (req, res) => {
 
 export const getAllOrders = async (req, res) => {
   try {
+    // SỬA DÒNG NÀY – QUAN TRỌNG NHẤT!
+    if (!req.user || !req.user.role || req.user.role !== 'admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Chỉ admin mới có quyền xem tất cả đơn hàng" 
+      });
+    }
+
     const orders = await Order.findAll({
       include: [
         { model: User, attributes: ['user_id', 'username', 'email', 'full_name'] },
-        { model: OrderDetail, as: 'order_details', include: [Product] }
+        { 
+          model: OrderDetail, 
+          as: 'order_details', 
+          include: [{ model: Product }] 
+        }
       ],
       order: [['order_date', 'DESC']]
     });
@@ -138,13 +150,14 @@ export const getAllOrders = async (req, res) => {
       }))
     });
   } catch (error) {
+    console.error("Lỗi lấy tất cả đơn hàng:", error);
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
 
 export const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findByPk(reqmingw .params.id, {
+    const order = await Order.findByPk(req.params.id, {
       include: [
         { model: User, attributes: ['username', 'full_name', 'email'] },
         { model: OrderDetail, as: 'order_details', include: [Product] }
@@ -152,7 +165,7 @@ export const getOrderById = async (req, res) => {
     });
 
     if (!order) return res.status(404).json({ success: false, message: "Không tìm thấy" });
-    if (order.user_id !== req.user.id && req.user.role !== 'admin') {
+    if (order.user_id !== req.user.user_id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: "Không có quyền" });
     }
 

@@ -60,16 +60,21 @@ export const removeFromCart = async (req, res) => {
 // 🟢 Xóa toàn bộ giỏ hàng theo userId
 export const clearCart = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const deleted = await Cart.destroy({ where: { user_id: userId } });
+    // LẤY user_id TỪ TOKEN ĐÃ XÁC THỰC – KHÔNG CẦN PARAMS NỮA!
+    const userId = req.user.user_id;
+
+    const deleted = await Cart.destroy({
+      where: { user_id: userId }
+    });
 
     if (deleted === 0) {
-      return res.status(404).json({ message: "Không có sản phẩm nào trong giỏ hàng để xóa" });
+      return res.json({ message: "Giỏ hàng đã trống" });
     }
 
-    res.status(200).json({ message: "Đã xóa toàn bộ giỏ hàng" });
+    res.json({ message: "Đã xóa toàn bộ giỏ hàng thành công!" });
   } catch (err) {
-    res.status(500).json({ message: "Lỗi khi xóa giỏ hàng", error: err.message });
+    console.error("Lỗi clear cart:", err);
+    res.status(500).json({ message: "Lỗi server" });
   }
 };
 

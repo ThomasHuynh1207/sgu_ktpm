@@ -237,7 +237,6 @@ const handleLogout = () => {
       onNavigate={setCurrentPage} 
       placeOrder={placeOrder}
       onOrderSuccess={() => {
-        clearCart();                    // Xóa giỏ hàng
         setCurrentPage('order-history'); // Chuyển sang lịch sử đơn
         toast.success('Đặt hàng thành công!');
       }}
