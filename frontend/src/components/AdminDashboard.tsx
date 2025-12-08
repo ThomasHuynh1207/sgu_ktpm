@@ -29,7 +29,7 @@ type AdminDashboardProps = {
   setOrders: (orders: Order[]) => void;
 };
 
-export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDashboardProps) {
+export function AdminDashboard({ onNavigate, user, orders: propOrders, setOrders: setPropOrders }: AdminDashboardProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<{ category_id: number; category_name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +41,8 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editCategoryName, setEditCategoryName] = useState('');
+
+  const [orders, setOrders] = useState<Order[]>(propOrders || []);
 
   useEffect(() => {
   const fetchData = async () => {
@@ -149,14 +151,34 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
   const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
   const pendingOrders = orders.filter((order) => order.status === 'Pending').length;
 
-  const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    setOrders(
-      orders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
-  };
+    const updateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status: newStatus }),
+    });
 
+    const result = await res.json();
+
+    if (res.ok && result.success) {
+      // CHỈ CẦN XÓA DẤU () CUỐI → HẾT LỖI NGAY
+      setOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, status: newStatus } : o
+      ));
+
+      toast.success("Cập nhật trạng thái thành công!");
+    } else {
+      toast.error(result.message || "Cập nhật thất bại");
+    }
+  } catch (err) {
+    toast.error("Lỗi kết nối server");
+  }
+};
   // ==================== SẢN PHẨM ====================
   const handleAddProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -608,55 +630,60 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
           <TabsContent value="orders" className="space-y-6">
             <h2 className="text-2xl text-gray-900">Danh sách đơn hàng</h2>
             <div className="grid gap-4">
-              {orders.map((order) => (
-                <Card key={order.id}>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-lg text-gray-900 mb-1">Đơn hàng #{order.id}</h3>
-                        <p className="text-sm text-gray-600">{formatDate(order.date)}</p>
-                      </div>
-                      <Badge>
-                        {order.status === 'Pending' && 'Chưa xử lý'}
-                        {order.status === 'Processing' && 'Đang xử lý'}
-                        {order.status === 'Shipped' && 'Đã gửi'}
-                        {order.status === 'Delivered' && 'Hoàn thành'}
-                      </Badge>
-                    </div>
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600 mb-2">Sản phẩm:</p>
-                      {order.items.map((item) => (
-                        <p key={item.product.id} className="text-sm text-gray-900">
-                          {item.product.product_name} × {item.quantity}
-                        </p>
-                      ))}
-                    </div>
-                    <div className="flex justify-between items-center pt-4 border-t">
-                      <div>
-                        <p className="text-sm text-gray-600">Tổng cộng</p>
-                        <p className="text-xl text-blue-600">{formatPrice(order.total)}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        {order.status === 'Pending' && (
-                          <Button size="sm" onClick={() => updateOrderStatus(order.id, 'Processing')}>
-                            Xử lý
-                          </Button>
-                        )}
-                        {order.status === 'Processing' && (
-                          <Button size="sm" onClick={() => updateOrderStatus(order.id, 'Shipped')}>
-                            Gửi hàng
-                          </Button>
-                        )}
-                        {order.status === 'Shipped' && (
-                          <Button size="sm" onClick={() => updateOrderStatus(order.id, 'Delivered')}>
-                            Hoàn thành
-                          </Button>
-                        )}
+            {orders.map((order) => (
+              <Card key={order.id}>
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Đơn hàng #{order.id}</h3>
+                      <p className="text-sm text-gray-600">{formatDate(order.date)}</p>
+                      <div className="mt-2 text-sm">
+                        <p><strong>Khách:</strong> {order.customerName || order.fullName || "Chưa có tên"} (ID: {order.userId})</p>
+                        <p><strong>SĐT:</strong> {order.customerPhone || "Chưa có"}</p>
+                        <p><strong>Địa chỉ:</strong> {order.shippingAddress}</p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <Badge variant={order.status === 'Pending' ? 'destructive' : 'default'}>
+                      {order.status === 'Pending' && 'Chưa xử lý'}
+                      {order.status === 'Processing' && 'Đang xử lý'}
+                      {order.status === 'Shipped' && 'Đã gửi hàng'}
+                      {order.status === 'Delivered' && 'Hoàn thành'}
+                    </Badge>
+                  </div>
+
+                  <div className="mb-4 bg-gray-50 p-4 rounded-lg">
+                    <p className="font-medium mb-2">Sản phẩm:</p>
+                    {order.items.map((item) => (
+                      <div key={item.product.product_id} className="flex justify-between text-sm">
+                        <span>{item.product.product_name} × {item.quantity}</span>
+                        <span>{formatPrice(item.product.price * item.quantity)}</span>
+                      </div>
+                    ))}
+                    <div className="font-bold text-right mt-3 text-lg text-blue-600">
+                      Tổng: {formatPrice(order.total)}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3">
+                    {order.status === 'Pending' && (
+                      <Button size="sm" onClick={() => updateOrderStatus(order.id, 'Processing')}>
+                        Bắt đầu xử lý
+                      </Button>
+                    )}
+                    {order.status === 'Processing' && (
+                      <Button size="sm" variant="secondary" onClick={() => updateOrderStatus(order.id, 'Shipped')}>
+                        Gửi hàng
+                      </Button>
+                    )}
+                    {order.status === 'Shipped' && (
+                      <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => updateOrderStatus(order.id, 'Delivered')}>
+                        Hoàn thành
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
               {orders.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
                   Chưa có đơn hàng nào

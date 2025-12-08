@@ -121,7 +121,6 @@ export const getMyOrders = async (req, res) => {
 
 export const getAllOrders = async (req, res) => {
   try {
-    // Kiểm tra admin (đã có middleware rồi nhưng cứ để thêm cho chắc)
     if (req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false, 
@@ -137,7 +136,7 @@ export const getAllOrders = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['user_id', 'username', 'email', 'full_name']
+          attributes: ['user_id', 'username', 'full_name', 'email', 'phone'], // lấy thêm thông tin user
         },
         {
           model: OrderDetail,
@@ -154,13 +153,24 @@ export const getAllOrders = async (req, res) => {
       order: [['order_date', 'DESC']]
     });
 
-    // Format lại cho frontend dễ dùng
+    // ĐÂY LÀ CHỖ SỬA CHÍNH – THÊM customerName ĐẸP ĐẼN
     const formattedOrders = orders.map(order => {
       const plain = order.toJSON();
+      const userInfo = plain.User || {};
+
       return {
         ...plain,
         id: plain.order_id.toString(),
         order_id: plain.order_id,
+        // TÊN KHÁCH HIỆN RA ĐẸP NHẤT CÓ THỂ
+        customerName: userInfo.full_name || userInfo.username || 'Khách vãng lai',
+        // Nếu muốn lấy cả số điện thoại từ user thay vì từ đơn hàng (chính xác hơn)
+        customerPhone: userInfo.phone || plain.phone || 'Chưa có',
+        customerEmail: userInfo.email || null,
+        // Giữ lại full_name cũ nếu frontend vẫn đang dùng
+        fullName: userInfo.full_name || plain.full_name || userInfo.username || 'Khách',
+        phone: userInfo.phone || plain.phone || 'Chưa có',
+
         items: plain.order_details?.map(detail => ({
           product: {
             product_id: detail.Product.product_id,
@@ -182,12 +192,10 @@ export const getAllOrders = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("LỖI LẤY TẤT CẢ ĐƠN HÀNG (ADMIN):", error.message);
-    console.error(error.stack);
+    console.error("LỖI LẤY TẤT CẢ ĐƠN HÀNG (ADMIN):", error);
     res.status(500).json({ 
       success: false, 
-      message: "Lỗi server khi tải đơn hàng admin",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: "Lỗi server khi tải đơn hàng admin"
     });
   }
 };
@@ -221,16 +229,56 @@ export const getOrderById = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const valid = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
-    if (!valid.includes(status)) return res.status(400).json({ message: "Trạng thái không hợp lệ" });
-
-    const [updated] = await Order.update({ status }, { where: { order_id: req.params.id } });
-    if (!updated) return res.status(404).json({ message: "Không tìm thấy đơn" });
+    const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: "Trạng thái không hợp lệ" });
+    }
 
     const order = await Order.findByPk(req.params.id);
-    res.json({ success: true, message: "Cập nhật thành công", order });
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng" });
+    }
+
+    order.status = status;
+    await order.save();
+
+    // TRẢ VỀ ĐẦY ĐỦ NHƯ getAllOrders ĐỂ FRONTEND KHÔNG BỊ LỖI
+    const refreshedOrder = await Order.findByPk(req.params.id, {
+      include: [
+        { model: User, attributes: ['user_id', 'username', 'full_name'] },
+        {
+          model: OrderDetail,
+          as: 'order_details',
+          include: [{ model: Product, attributes: ['product_id', 'product_name', 'image', 'price'] }]
+        }
+      ]
+    });
+
+    const formatted = {
+      ...refreshedOrder.toJSON(),
+      id: refreshedOrder.order_id.toString(),
+      items: refreshedOrder.order_details?.map(d => ({
+        product: {
+          product_id: d.Product.product_id,
+          product_name: d.Product.product_name,
+          price: d.Product.price,
+          image: d.Product.image,
+          id: d.Product.product_id.toString(),
+          name: d.Product.product_name,
+        },
+        quantity: d.quantity,
+      })) || []
+    };
+
+    res.json({
+      success: true,
+      message: "Cập nhật trạng thái thành công!",
+      data: formatted
+    });
+
   } catch (err) {
-    res.status(500).json({ message: "Lỗi server" });
+    console.error(err);
+    res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
 

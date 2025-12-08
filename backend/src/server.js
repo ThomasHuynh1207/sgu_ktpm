@@ -24,7 +24,7 @@ app.use(errorHandler);
 // Start
 const startServer = async () => {
   try {
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ });
     console.log("DB connected & synced successfully!");
 
 

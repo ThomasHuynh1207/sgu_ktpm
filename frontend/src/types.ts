@@ -47,7 +47,8 @@ export interface Order {
   phone?: string;
   fullName?: string;
   notes?: string;
-  
+  customerName?: string;
+  customerPhone?: string;
 }
 
 // Order từ backend (giữ nguyên tên DB)
