@@ -248,41 +248,6 @@ export function ProductDetail({ productId, onNavigate, addToCart }: ProductDetai
             </p>
           </div>
         </div>
-
-        {/* Sản phẩm liên quan */}
-        {relatedProducts.length > 0 && (
-          <div className="mt-20">
-            <h2 className="text-3xl font-bold mb-10 text-gray-900">Sản phẩm liên quan</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {relatedProducts.map((p) => (
-                <Card
-                  key={p.id}
-                  className="overflow-hidden hover:shadow-2xl transition-all cursor-pointer group"
-                  onClick={() => {
-                    // Cập nhật productId để reload chi tiết mới
-                    window.location.href = `/product/${p.product_id}`; // hoặc dùng onNavigate nếu bạn có router
-                    window.scrollTo(0, 0);
-                  }}
-                >
-                  <div className="aspect-square overflow-hidden bg-gray-100">
-                    <ImageWithFallback
-                      src={p.image}
-                      alt={p.product_name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  </div>
-                  <CardContent className="p-5">
-                    <p className="text-sm text-blue-600 mb-1">{p.category}</p>
-                    <h3 className="font-semibold text-lg line-clamp-2 mb-3">{p.product_name}</h3>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {formatPrice(p.price)}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
