@@ -6,11 +6,12 @@ import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { ChevronLeft, Minus, Plus, ShoppingCart, Check, Loader2 } from 'lucide-react';
 import type { Product } from '../types';
+import { toast } from 'sonner';
 
 type ProductDetailProps = {
   productId: string | null;
   onNavigate: (page: string) => void;
-  addToCart: (product: Product, quantity: number) => void;
+  addToCart: (product: Product, quantity? : number) => void;
 };
 
 export function ProductDetail({ productId, onNavigate, addToCart }: ProductDetailProps) {
@@ -80,11 +81,41 @@ export function ProductDetail({ productId, onNavigate, addToCart }: ProductDetai
   };
 
   const handleAddToCart = () => {
-    if (!product) return;
-    addToCart(product, quantity);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
-  };
+  if (!product) return;
+
+  // Thêm vào giỏ
+  addToCart(product, quantity);
+
+  // Hiệu ứng nút chuyển thành "Đã thêm"
+  setAdded(true);
+  setTimeout(() => setAdded(false), 2000);
+
+  // TOAST ĐẸP LUNG LINH
+  toast.success(
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+        <ShoppingCart className="h-5 w-5 text-green-600" />
+      </div>
+      <div>
+        <p className="font-semibold text-base">Đã thêm vào giỏ hàng!</p>
+        <p className="text-sm text-gray-600">
+          {product.product_name} × {quantity}
+        </p>
+      </div>
+    </div>,
+    {
+      duration: 3000,
+      position: "top-center",
+      style: {
+        background: 'white',
+        border: '1px solid #e5e7eb',
+        borderRadius: '12px',
+        padding: '12px',
+        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+      },
+    }
+  );
+};
 
   // Loading
   if (loading) {
@@ -225,7 +256,7 @@ export function ProductDetail({ productId, onNavigate, addToCart }: ProductDetai
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {relatedProducts.map((p) => (
                 <Card
-                  key={p.product_id}
+                  key={p.id}
                   className="overflow-hidden hover:shadow-2xl transition-all cursor-pointer group"
                   onClick={() => {
                     // Cập nhật productId để reload chi tiết mới

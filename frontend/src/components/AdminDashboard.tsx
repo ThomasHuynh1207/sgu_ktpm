@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import type { Order, User, Product } from '../types';
+import { api } from './utils/api';
 
 type AdminDashboardProps = {
   onNavigate: (page: string) => void;
@@ -54,20 +55,9 @@ export function AdminDashboard({ onNavigate, user, orders, setOrders }: AdminDas
 
 
       const [prodRes, catRes, orderRes] = await Promise.all([
-        fetch("http://localhost:5000/api/products", {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-
-        fetch("http://localhost:5000/api/categories", {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-
-        fetch("http://localhost:5000/api/orders", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }),
+        api('/products'),
+        api('/categories'),
+        api('/orders'),
       ]);
       
 

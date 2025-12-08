@@ -5,12 +5,13 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import type { Product } from '../types';
+import { toast } from 'sonner';
 
 type ProductCatalogProps = {
   onNavigate: (page: string) => void;
   onViewProduct: (productId: string) => void;
   selectedCategory: string | null;
-  addToCart: (product: Product, quantity: number) => void;
+  addToCart: (product: Product, quantity? : number) => void;
 };
 
 export function ProductCatalog({
@@ -200,7 +201,7 @@ export function ProductCatalog({
                   className="w-full"
                   onClick={(e) => {
                     e.stopPropagation();
-                    addToCart(product, 1);
+                    addToCart(product);
                   }}
                   disabled={product.stock === 0}
                 >

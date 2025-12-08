@@ -7,12 +7,13 @@ import { categories } from '../data/products'; // giữ lại để hiển thị
 import type { Product } from '../types';
 import { Badge } from './ui/badge';
 import { Package }  from 'lucide-react';
+import {api} from './utils/api' ;
 
 type HomeProps = {
   onNavigate: (page: string) => void;
   onViewProduct: (productId: string) => void;
   onNavigateToProducts: (category?: string) => void;
-  addToCart: (product: Product, quantity: number) => void;
+  addToCart: (product: Product, quantity?: number) => void;
 };
 
 export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCart }: HomeProps) {
@@ -20,7 +21,7 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/products')
+    api('/products')
       .then(res => {
         if (!res.ok) throw new Error('Không tải được sản phẩm');
         return res.json();
@@ -170,7 +171,7 @@ export function Home({ onNavigate, onViewProduct, onNavigateToProducts, addToCar
                       disabled={product.stock === 0}
                       onClick={(e) => {
                         e.stopPropagation(); // ngăn click lan ra card
-                        addToCart(product, 1);
+                        addToCart(product);
                       }}
                     >
                       {product.stock === 0 ? 'Hết hàng' : 'Thêm vào giỏ'}

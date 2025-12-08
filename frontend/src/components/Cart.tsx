@@ -60,7 +60,7 @@ export function Cart({ cart, onNavigate, updateQuantity, removeItem }: CartProps
             {/* Danh sách sản phẩm */}
             <div className="lg:col-span-2 space-y-6">
               {cart.map((item) => (
-                <Card key={item.product.id || item.product.product_id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <Card key={item.product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex gap-6">
                       {/* Ảnh */}

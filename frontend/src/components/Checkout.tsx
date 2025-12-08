@@ -73,7 +73,7 @@ export function Checkout({ cart, user, onNavigate, onOrderSuccess }: CheckoutPro
         fullName: formData.fullName,
         status: 'Pending',
         items: cart.map(item => ({
-          productId: item.product.product_id,
+          productId: item.product.product_id ?? item.product.id,
           quantity: item.quantity,
           price: item.product.price
         }))

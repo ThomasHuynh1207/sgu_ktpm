@@ -12,6 +12,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { OrderHistory } from './components/OrderHistory';
 import { UserProfile } from './components/UserProfile';
 import { Header } from './components/Header';
+import { Toaster } from 'sonner';
 
 import type { Product, CartItem, User, Order, OrderFromBackend } from './types';
 
@@ -26,7 +27,6 @@ export default function App() {
 // Khôi phục giỏ hàng 
 useEffect(() => {
   if (!user) {
-    setCart([]);
     return;
   }
 
@@ -87,38 +87,51 @@ const handleLogout = () => {
   localStorage.removeItem('user');
   localStorage.removeItem('token');
   setUser(null);
-  setCart([]); // ← xóa luôn trong state
+  setCart([]); 
   setCurrentPage('home');
   toast.success('Đăng xuất thành công!');
 };
 
-  const addToCart = (product: Product) => {
-  const productId = product.product_id.toString(); // luôn có id string
+  const addToCart = (product: Product, quantity: number = 1) => {
+
+      const productId = 
+    product.product_id?.toString() ??
+    product.id?.toString();
+
+  
+  if (!product) {
+    toast.error("Sản phẩm không hợp lệ!");
+    return;
+  }
 
   setCart(prev => {
     const existing = prev.find(item => item.product.id === productId);
 
     if (existing) {
+      toast.success(`Đã tăng số lượng: ${product.product_name}`);
       return prev.map(item =>
         item.product.id === productId
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: item.quantity + quantity }  // ← DÙNG quantity truyền vào
           : item
       );
     }
 
+    toast.success(`Đã thêm vào giỏ: ${product.product_name}`);
     return [
       ...prev,
       {
         product: {
           ...product,
-          id: productId, // BẮT BUỘC: thêm id dạng string
+          product_id: product.product_id ?? product.id,
+          id: productId,
+          name: product.product_name,
+          category: product.category_name || 'Chưa phân loại',
         },
-        quantity: 1,
+        quantity,
       }
     ];
   });
 };
-
 
   const updateCartQuantity = (productId: string, quantity: number) => {
   if (quantity < 1) {
@@ -294,6 +307,14 @@ const handleLogout = () => {
       <main className={currentPage === 'login' || currentPage === 'register' ? '' : 'pt-16'}>
         {renderPage()}
       </main>
+
+
+      <Toaster 
+      position="top-center"
+      richColors
+      closeButton
+      expand
+    />
     </div>
   );
 }
