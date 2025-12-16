@@ -12,9 +12,11 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { OrderHistory } from './components/OrderHistory';
 import { UserProfile } from './components/UserProfile';
 import { Header } from './components/Header';
+import { SearchResults } from './components/SearchResults';
 import { Toaster } from 'sonner';
 
 import type { Product, CartItem, User, Order, OrderFromBackend } from './types';
+
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
@@ -287,6 +289,14 @@ const handleLogout = () => {
         return <OrderHistory onNavigate={setCurrentPage} orders={orders} user={user} />;
       case 'profile':
         return <UserProfile onNavigate={setCurrentPage} user={user} setUser={setUser} />;
+      case 'search':
+      return (
+        <SearchResults
+          onViewProduct={viewProductDetail}
+          addToCart={addToCart}
+          onNavigate={setCurrentPage}
+        />
+      );
       default:
         return <Home onNavigate={setCurrentPage} onViewProduct={viewProductDetail} onNavigateToProducts={navigateToProducts} addToCart={addToCart} />;
     }

@@ -2,9 +2,9 @@
 import { ShoppingCart, Search, LogOut, User as UserIcon, Monitor } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback } from './ui/avatar';
 import { Input } from './ui/input';
 import type { User } from '../types';
+import { useState } from 'react';
 
 type HeaderProps = {
   user: User | null;
@@ -26,6 +26,16 @@ export function Header({ user, onNavigate, cartCount, setUser }: HeaderProps) {
     onNavigate('profile');
   };
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+
+  const handleSearch = () => {
+  if (searchQuery.trim()) {
+    console.log('Header: Người dùng nhấn tìm kiếm →', searchQuery); // LOG Ở ĐÂY
+    onNavigate(`search`);
+    setSearchQuery('');
+  }
+};
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -45,7 +55,17 @@ export function Header({ user, onNavigate, cartCount, setUser }: HeaderProps) {
                 type="text"
                 placeholder="Tìm kiếm laptop, PC, linh kiện, phụ kiện..."
                 className="w-full pl-10 pr-4 py-2.5 "
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    onNavigate('search');
+                    
+                  }
+                }}
               />
+              
+           
             </div>
           </div>
 

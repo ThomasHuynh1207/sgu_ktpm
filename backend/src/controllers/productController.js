@@ -1,6 +1,6 @@
-// src/controllers/productController.js
-import Product from "../models/Product.js";
-import Category from "../models/Category.js";
+import { Op } from "sequelize";
+import { Product, Category } from "../models/associations.js";
+
 
 // QUAN TRỌNG: Chỉ include tên danh mục, không lấy hết
 export const getAllProducts = async (req, res) => {
@@ -116,3 +116,39 @@ export const deleteProduct = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+
+export const searchProducts = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim() === "") return res.json([]);
+
+    const keyword = `%${q.trim()}%`;
+
+    const products = await Product.findAll({
+      where: {
+        [Op.or]: [
+          { product_name: { [Op.iLike]: keyword } },
+          { description: { [Op.iLike]: keyword } }
+        ]
+      },
+      include: [
+        {
+          model: Category,
+          attributes: ["category_name"],
+          required: false,
+          where: {
+            category_name: { [Op.iLike]: keyword }
+          }
+        }
+      ]
+    });
+
+    res.json(products);
+  } catch (err) {
+    console.error("Lỗi tìm kiếm:", err);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+};
+

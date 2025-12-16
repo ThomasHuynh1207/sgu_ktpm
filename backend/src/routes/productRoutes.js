@@ -4,11 +4,13 @@ import {
   getProductById,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  searchProducts
 } from "../controllers/productController.js";
 
 const router = express.Router();
 
+router.get("/search" , searchProducts);
 router.get("/", getAllProducts);
 router.get("/:id", getProductById);
 router.post("/", createProduct);

@@ -83,7 +83,7 @@ export function Checkout({ cart, user, onNavigate, onOrderSuccess }: CheckoutPro
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // nếu mày dùng JWT
+          'Authorization': `Bearer ${localStorage.getItem('token')}`, 
         },
         body: JSON.stringify(orderData),
       });
