@@ -32,8 +32,8 @@ export function Header({ user, onNavigate, cartCount, setUser }: HeaderProps) {
   const handleSearch = () => {
   if (searchQuery.trim()) {
     console.log('Header: Người dùng nhấn tìm kiếm →', searchQuery); // LOG Ở ĐÂY
-    onNavigate(`search`);
-    setSearchQuery('');
+    onNavigate(`search?q=${encodeURIComponent(searchQuery.trim())}`);
+     setSearchQuery(searchQuery.trim());
   }
 };
   return (
@@ -58,10 +58,7 @@ export function Header({ user, onNavigate, cartCount, setUser }: HeaderProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchQuery.trim()) {
-                    onNavigate('search');
-                    
-                  }
+                  if (e.key === 'Enter') handleSearch();
                 }}
               />
               

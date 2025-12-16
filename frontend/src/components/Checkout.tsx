@@ -70,7 +70,7 @@ export function Checkout({ cart, user, onNavigate, onOrderSuccess }: CheckoutPro
         paymentMethod: paymentMethod.toUpperCase(),
         notes: formData.notes,
         phone: formData.phone,
-        fullName: formData.fullName,
+        full_name: formData.fullName,
         status: 'Pending',
         items: cart.map(item => ({
           productId: item.product.product_id ?? item.product.id,
@@ -294,10 +294,13 @@ export function Checkout({ cart, user, onNavigate, onOrderSuccess }: CheckoutPro
                         <CheckCircle className="mr-2 h-5 w-5" />
                         Xác nhận đặt hàng
                       </>
+                      
                     )}
+                    
                   </Button>
                 </CardContent>
               </Card>
+              
             </div>
           </div>
         </form>

@@ -25,6 +25,8 @@ export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
 
 // Khôi phục giỏ hàng 
 useEffect(() => {
@@ -71,13 +73,25 @@ useEffect(() => {
           address: u.address,
           role: u.role,
         });
+        
       } catch {
         localStorage.clear();
       }
     }
   }, []);
 
-  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
+
+  // LẤY ĐƠN HÀNG CỦA USER SAU KHI LOGIN
+useEffect(() => {
+  if (user) {
+    fetchMyOrders(user);
+  } else {
+    setOrders([]);
+  }
+}, [user]);
+
+
+const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
 const handleLogout = () => {
   // Xóa giỏ hàng của user hiện tại
@@ -191,6 +205,7 @@ const handleLogout = () => {
       id: tempId,
       date: new Date().toISOString(),
       userId: user!.user_id,
+      items: orderData.items ?? [],
     };
     setOrders(prev => [...prev, tempOrder]);
     clearCart();
@@ -250,6 +265,44 @@ const handleLogout = () => {
   }
 };
 
+
+  const fetchMyOrders = async (u: User) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const res = await fetch('http://localhost:5000/api/orders/myorders', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) throw new Error('Không lấy được đơn hàng');
+
+    const json = await res.json();
+
+    // MAP dữ liệu backend → frontend
+    const mapped: Order[] = json.data.map((o: any) => ({
+      id: o.id,
+      userId: u.user_id,
+      date: o.order_date,
+      total: o.total_amount,
+      status: o.status,
+      paymentMethod: o.payment_method,
+      shippingAddress: o.shipping_address,
+      phone: o.phone,
+      fullName: o.full_name,
+      notes: o.notes,
+      items: o.items,
+    }));
+
+    setOrders(mapped);
+  } catch (err) {
+    console.error('Lỗi lấy order:', err);
+  }
+};
+
+
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
@@ -294,7 +347,8 @@ const handleLogout = () => {
         <SearchResults
           onViewProduct={viewProductDetail}
           addToCart={addToCart}
-          onNavigate={setCurrentPage}
+          searchQuery={searchQuery}
+          
         />
       );
       default:
@@ -310,7 +364,8 @@ const handleLogout = () => {
           cartCount={cartCount}
           user={user}
           onLogout={handleLogout}
-          setUser={setUser}        
+          setUser={setUser}  
+          
           />
       )}
 

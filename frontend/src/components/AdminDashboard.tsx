@@ -151,7 +151,7 @@ export function AdminDashboard({ onNavigate, user, orders: propOrders, setOrders
   const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
   const pendingOrders = orders.filter((order) => order.status === 'Pending').length;
 
-    const updateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
+  const updateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
   try {
     const token = localStorage.getItem("token");
     const res = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
@@ -638,8 +638,8 @@ export function AdminDashboard({ onNavigate, user, orders: propOrders, setOrders
                       <h3 className="text-lg font-bold text-gray-900">Đơn hàng #{order.id}</h3>
                       <p className="text-sm text-gray-600">{formatDate(order.date)}</p>
                       <div className="mt-2 text-sm">
-                        <p><strong>Khách:</strong> {order.customerName || order.fullName || "Chưa có tên"} (ID: {order.userId})</p>
-                        <p><strong>SĐT:</strong> {order.customerPhone || "Chưa có"}</p>
+                        <p><strong>Khách:</strong> { order.fullName || "Chưa có tên"} (ID: {order.userId})</p>
+                        <p><strong>SĐT:</strong> {order.phone || "Chưa có"}</p>
                         <p><strong>Địa chỉ:</strong> {order.shippingAddress}</p>
                       </div>
                     </div>
@@ -664,23 +664,40 @@ export function AdminDashboard({ onNavigate, user, orders: propOrders, setOrders
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3">
-                    {order.status === 'Pending' && (
-                      <Button size="sm" onClick={() => updateOrderStatus(order.id, 'Processing')}>
-                        Bắt đầu xử lý
-                      </Button>
-                    )}
-                    {order.status === 'Processing' && (
-                      <Button size="sm" variant="secondary" onClick={() => updateOrderStatus(order.id, 'Shipped')}>
-                        Gửi hàng
-                      </Button>
-                    )}
-                    {order.status === 'Shipped' && (
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => updateOrderStatus(order.id, 'Delivered')}>
-                        Hoàn thành
-                      </Button>
-                    )}
-                  </div>
+                 <div className="flex justify-end gap-3">
+  {order.status === 'Pending' && (
+    <Button size="sm" onClick={() => updateOrderStatus(order.id, 'Processing')}>
+      Bắt đầu xử lý
+    </Button>
+  )}
+
+  {order.status === 'Processing' && (
+    <Button
+      size="sm"
+      variant="secondary"
+      onClick={() => updateOrderStatus(order.id, 'Shipped')}
+    >
+      Gửi hàng
+    </Button>
+  )}
+
+  {order.status === 'Shipped' && (
+    <Button
+      size="sm"
+      className="bg-green-600 hover:bg-green-700 text-white"
+      onClick={() => updateOrderStatus(order.id, 'Delivered')}
+    >
+      Hoàn thành
+    </Button>
+  )}
+
+  {order.status === 'Delivered' && (
+    <Button size="sm" variant="outline" disabled>
+      Đã hoàn thành
+    </Button>
+  )}
+</div>
+
                 </CardContent>
               </Card>
             ))}

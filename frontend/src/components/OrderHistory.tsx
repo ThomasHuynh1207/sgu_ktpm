@@ -58,7 +58,7 @@ export function OrderHistory({ onNavigate, orders, user }: OrderHistoryProps) {
   }
 
   // SỬA CHỖ NÀY – ĐÚNG 100%
-  const userOrders = orders.filter(order => order.userId === user.user_id);
+  const userOrders = orders;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -97,7 +97,7 @@ export function OrderHistory({ onNavigate, orders, user }: OrderHistoryProps) {
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-3">Sản phẩm đã đặt</h4>
                     <div className="space-y-3">
-                      {order.items.map((item, idx) => (
+                      {(order.items || [])  .map((item, idx) => (
                         <div key={idx} className="flex items-center justify-between py-3 border-b last:border-0">
                           <div className="flex items-center gap-4">
                             {item.product.image ? (
@@ -172,7 +172,7 @@ export function OrderHistory({ onNavigate, orders, user }: OrderHistoryProps) {
                   )}
                   {order.status === 'Delivered' && (
                     <Button variant="outline" className="w-full sm:w-auto">
-                      Mua lại đơn này
+                      Đánh giá 
                     </Button>
                   )}
                 </CardContent>

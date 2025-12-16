@@ -7,6 +7,8 @@ import User from "../models/User.js";
 
 // TẠO ĐƠN HÀNG – ĐÃ HOÀN HẢO, CHỈ SỬA TRẢ VỀ ĐỂ FRONTEND DỄ DÙNG ID THẬT
 export const createOrder = async (req, res) => {
+  console.log("REQ BODY ORDER:", req.body);
+
   const t = await Order.sequelize.transaction();
 
   try {
@@ -17,6 +19,7 @@ export const createOrder = async (req, res) => {
       paymentMethod = "COD",
       notes = "",
       phone,
+      full_name,
       fullName,
       items,
     } = req.body;
@@ -35,7 +38,7 @@ export const createOrder = async (req, res) => {
         status: "Pending",
         notes,
         phone,
-        full_name: fullName || req.user.full_name || req.user.username,
+        full_name: full_name||fullName || req.user.full_name || req.user.username,
       },
       { transaction: t }
     );
@@ -96,28 +99,73 @@ export const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.findAll({
       where: { user_id: req.user.user_id },
-      attributes: ['order_id', 'total_amount', 'status', 'payment_method', 'shipping_address', 'order_date', 'phone', 'full_name', 'notes'],
-      include: [{
-        model: OrderDetail,
-        as: 'order_details',
-        include: [{ model: Product, attributes: ['product_id', 'product_name', 'image', 'price'] }]
-      }],
+      attributes: [
+        'order_id',
+        'user_id',
+        'total_amount',
+        'status',
+        'payment_method',
+        'shipping_address',
+        'order_date',
+        'phone',
+        'full_name'
+      ],
+      include: [
+        {
+          model: OrderDetail,
+          as: 'order_details',
+          attributes: ['quantity', 'price'],
+          include: [
+            {
+              model: Product,
+              attributes: ['product_id', 'product_name', 'image', 'price']
+            }
+          ]
+        }
+      ],
       order: [['order_date', 'DESC']]
+    });
+
+    const formattedOrders = orders.map(order => {
+      const plain = order.toJSON();
+
+      return {
+        // 🔥 KHỚP FRONTEND
+        id: plain.order_id.toString(),
+        userId: plain.user_id,
+        date: plain.order_date,
+        status: plain.status,
+        total: plain.total_amount,
+        paymentMethod: plain.payment_method,
+        shippingAddress: plain.shipping_address,
+        phone: plain.phone,
+        fullName: plain.full_name,
+
+        // 🔥 QUAN TRỌNG NHẤT
+        items: plain.order_details.map(detail => ({
+          quantity: detail.quantity,
+          product: {
+            product_id: detail.Product.product_id,
+            product_name: detail.Product.product_name,
+            price: detail.Product.price,
+            image: detail.Product.image || 'https://via.placeholder.com/300',
+          }
+        }))
+      };
     });
 
     res.json({
       success: true,
-      count: orders.length,
-      data: orders.map(o => ({
-        ...o.toJSON(),
-        id: o.order_id.toString(), // frontend dùng "id"
-        order_id: o.order_id,
-      }))
+      count: formattedOrders.length,
+      data: formattedOrders
     });
+
   } catch (error) {
+    console.error("Lỗi lấy đơn hàng của tôi:", error);
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
+
 
 export const getAllOrders = async (req, res) => {
   try {
@@ -165,11 +213,11 @@ export const getAllOrders = async (req, res) => {
         // TÊN KHÁCH HIỆN RA ĐẸP NHẤT CÓ THỂ
         customerName: userInfo.full_name || userInfo.username || 'Khách vãng lai',
         // Nếu muốn lấy cả số điện thoại từ user thay vì từ đơn hàng (chính xác hơn)
-        customerPhone: userInfo.phone || plain.phone || 'Chưa có',
+        customerPhone:  userInfo.phone || plain.phone || 'Chưa có',
         customerEmail: userInfo.email || null,
         // Giữ lại full_name cũ nếu frontend vẫn đang dùng
-        fullName: userInfo.full_name || plain.full_name || userInfo.username || 'Khách',
-        phone: userInfo.phone || plain.phone || 'Chưa có',
+        fullName: plain.full_name || userInfo.full_name || userInfo.username || 'Khách',
+        phone:  plain.phone || userInfo.phone || 'Chưa có',
 
         items: plain.order_details?.map(detail => ({
           product: {
