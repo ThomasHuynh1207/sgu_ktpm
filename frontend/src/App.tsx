@@ -343,6 +343,8 @@ const handleLogout = () => {
       case 'profile':
         return <UserProfile onNavigate={setCurrentPage} user={user} setUser={setUser} />;
       case 'search':
+        if (currentPage.startsWith('search')) {
+        const query = currentPage.split('q=')[1] || '';
       return (
         <SearchResults
           onViewProduct={viewProductDetail}
@@ -350,7 +352,7 @@ const handleLogout = () => {
           searchQuery={searchQuery}
           
         />
-      );
+      );}
       default:
         return <Home onNavigate={setCurrentPage} onViewProduct={viewProductDetail} onNavigateToProducts={navigateToProducts} addToCart={addToCart} />;
     }

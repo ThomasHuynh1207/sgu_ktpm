@@ -30,11 +30,11 @@ export function Header({ user, onNavigate, cartCount, setUser }: HeaderProps) {
 
 
   const handleSearch = () => {
-  if (searchQuery.trim()) {
-    console.log('Header: Người dùng nhấn tìm kiếm →', searchQuery); // LOG Ở ĐÂY
-    onNavigate(`search?q=${encodeURIComponent(searchQuery.trim())}`);
-     setSearchQuery(searchQuery.trim());
-  }
+    const q = searchQuery.trim();
+  if (!q) return;
+  onNavigate(`search?q=${q}`); // truyền query trực tiếp
+  setSearchQuery('');
+
 };
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">

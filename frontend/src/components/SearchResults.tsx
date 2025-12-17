@@ -22,34 +22,27 @@ type SearchResultsProps = {
   searchQuery: string;
 };
 
-export function SearchResults({ onViewProduct, addToCart }: SearchResultsProps) {
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const searchQuery = searchParams.get('q') || ''; // Lấy từ URL
-
+export function SearchResults({ onViewProduct, addToCart, searchQuery }: SearchResultsProps) {
   const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchResults = async (searchTerm: string) => {
-    if (!searchTerm.trim()) return setResults([]);
-
-    try {
-      setLoading(true);
-      const res = await fetch(`http://localhost:5000/api/products/search?q=${encodeURIComponent(searchTerm.trim())}`);
-      if (!res.ok) throw new Error('Lỗi server');
-      const data = await res.json();
-      setResults(data || []);
-    } catch (err) {
-      console.error(err);
-      toast.error('Không thể tìm kiếm. Vui lòng thử lại!');
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchResults(searchQuery); // Tự động fetch khi vào trang hoặc query thay đổi
+    if (!searchQuery) return;
+    const fetchResults = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/products/search?q=${encodeURIComponent(searchQuery)}`
+        );
+        const data = await res.json();
+        setResults(data || []);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchResults();
   }, [searchQuery]);
 
   const formatPrice = (price: number) =>
