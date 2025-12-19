@@ -168,7 +168,7 @@ export function OrderHistory({ onNavigate, orders, user }: OrderHistoryProps) {
                   </div>
 
                   {order.status === 'Pending' && (
-                    <Button className="w-full sm:w-auto">Thanh toán ngay</Button>
+                    <Button className="w-full sm:w-auto">Đánh giá</Button>
                   )}
                   {order.status === 'Delivered' && (
                     <Button variant="outline" className="w-full sm:w-auto">

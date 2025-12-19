@@ -1,0 +1,4 @@
+cd performance/selenium
+npm init -y
+npm install selenium-webdriver chromedriver
+node login.test.js

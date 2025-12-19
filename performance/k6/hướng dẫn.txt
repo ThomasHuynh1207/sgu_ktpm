@@ -1,0 +1,3 @@
+install k6 -y
+cd performance/k6
+chạy: k6 run load-test.js hoặc k6 run stress-test.js
