@@ -1,22 +1,28 @@
-# Sử dụng Node.js image chính thức
 FROM node:20-alpine
 
-# Đặt thư mục làm việc trong container
+# Thư mục làm việc
 WORKDIR /app
 
-# Copy file cấu hình package vào container trước
+# (Tuỳ chọn) Dùng mirror npm nhanh hơn
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+RUN npm config set registry $NPM_REGISTRY
+
+# Copy package trước để tận dụng cache
 COPY package*.json ./
 
-# Cài đặt dependencies
-RUN npm install
+# Cài dependencies (CI-friendly)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
 
+# Cài nodemon (chỉ dùng nếu bạn chạy dev)
+# 👉 Nếu backend prod KHÔNG cần nodemon → xoá dòng này
 RUN npm install -g nodemon
 
-# Copy toàn bộ mã nguồn vào container
+# Copy source code
 COPY . .
 
-# Mở cổng backend (thường là 5000)
+# Expose port backend (Render sẽ override bằng PORT env)
 EXPOSE 5000
 
-# Lệnh chạy server
+# Render sẽ inject PORT → bạn nên dùng process.env.PORT
 CMD ["npm", "start"]
