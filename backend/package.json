@@ -15,9 +15,11 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3",
+    "react-router-dom": "^7.11.0",
     "sequelize": "^6.37.7"
   },
   "devDependencies": {
+    "@types/react-router-dom": "^5.3.3",
     "nodemon": "^3.1.0"
   }
 }
